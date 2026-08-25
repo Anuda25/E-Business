@@ -1,0 +1,2700 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Tour Guide | Explore Your Dream Destination</title>
+
+    <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <style>
+
+        /* =========================================
+           GOOGLE FONT
+        ========================================= */
+
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+
+        /* =========================================
+           RESET
+        ========================================= */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+
+        body {
+
+            font-family: 'Poppins', Arial, sans-serif;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #070707,
+                    #11131a,
+                    #0b0710,
+                    #080808
+                );
+
+            color: white;
+
+            overflow-x: hidden;
+
+        }
+
+
+        /* =========================================
+           COLOR VARIABLES
+        ========================================= */
+
+        :root {
+
+            --red: #e50914;
+            --bright-red: #ff2532;
+            --dark-red: #990810;
+
+            --orange: #ff6b35;
+            --pink: #ff2e63;
+            --purple: #8b2cff;
+
+            --black: #070707;
+            --dark: #101116;
+            --card: #15161d;
+
+            --white: #ffffff;
+            --gray: #aeb1b8;
+
+        }
+
+
+        /* =========================================
+           SCROLLBAR
+        ========================================= */
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+
+        ::-webkit-scrollbar-track {
+            background: #090909;
+        }
+
+
+        ::-webkit-scrollbar-thumb {
+
+            background:
+                linear-gradient(
+                    var(--red),
+                    var(--orange)
+                );
+
+            border-radius: 10px;
+
+        }
+
+
+        /* =========================================
+           HEADER
+        ========================================= */
+
+        header {
+
+            height: 82px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            padding: 0 5%;
+
+            position: sticky;
+
+            top: 0;
+
+            z-index: 1000;
+
+            background:
+                rgba(10, 10, 15, 0.88);
+
+            backdrop-filter:
+                blur(18px);
+
+            border-bottom:
+                1px solid
+                rgba(255, 70, 70, 0.2);
+
+            box-shadow:
+                0 5px 30px
+                rgba(0, 0, 0, 0.45);
+
+        }
+
+
+        /* =========================================
+           LOGO
+        ========================================= */
+
+        .logo {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 13px;
+
+            font-size: 25px;
+
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition: 0.4s;
+
+        }
+
+
+        .logo:hover {
+
+            transform:
+                scale(1.04);
+
+        }
+
+
+        .logo-icon {
+
+            width: 48px;
+
+            height: 38px;
+
+            border: 2px solid var(--bright-red);
+
+            border-radius: 6px;
+
+            position: relative;
+
+            overflow: hidden;
+
+            box-shadow:
+                0 0 18px
+                rgba(255, 37, 50, 0.35);
+
+        }
+
+
+        .logo-icon::before {
+
+            content: "";
+
+            position: absolute;
+
+            width: 120%;
+
+            height: 2px;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    var(--red),
+                    var(--orange)
+                );
+
+            top: 17px;
+
+            left: -5px;
+
+            transform:
+                rotate(32deg);
+
+        }
+
+
+        .logo-icon::after {
+
+            content: "";
+
+            position: absolute;
+
+            width: 120%;
+
+            height: 2px;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    var(--orange),
+                    var(--red)
+                );
+
+            top: 17px;
+
+            left: -5px;
+
+            transform:
+                rotate(-32deg);
+
+        }
+
+
+        /* =========================================
+           NAVIGATION
+        ========================================= */
+
+        nav {
+
+            display: flex;
+
+            gap: 32px;
+
+        }
+
+
+        nav a {
+
+            color: #d9d9dd;
+
+            text-decoration: none;
+
+            font-size: 14px;
+
+            font-weight: 500;
+
+            position: relative;
+
+            transition: 0.3s;
+
+        }
+
+
+        nav a:hover {
+
+            color: white;
+
+        }
+
+
+        nav a::after {
+
+            content: "";
+
+            position: absolute;
+
+            width: 0;
+
+            height: 3px;
+
+            left: 0;
+
+            bottom: -10px;
+
+            border-radius: 10px;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    var(--red),
+                    var(--orange),
+                    var(--pink)
+                );
+
+            transition: 0.4s;
+
+        }
+
+
+        nav a:hover::after,
+        nav a.active::after {
+
+            width: 100%;
+
+        }
+
+
+        nav a.active {
+
+            color: white;
+
+        }
+
+
+        /* =========================================
+           LOGIN
+        ========================================= */
+
+        .login-area {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+        }
+
+
+        .login-area a {
+
+            color: white;
+
+            text-decoration: none;
+
+            font-size: 14px;
+
+            transition: 0.3s;
+
+        }
+
+
+        .login-area a:hover {
+
+            color: var(--bright-red);
+
+        }
+
+
+        .profile {
+
+            width: 42px;
+
+            height: 42px;
+
+            margin-left: 10px;
+
+            display: flex;
+
+            justify-content: center;
+
+            align-items: center;
+
+            border-radius: 50%;
+
+            border: 2px solid var(--bright-red);
+
+            cursor: pointer;
+
+            transition: 0.4s;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(229,9,20,0.15),
+                    rgba(139,44,255,0.15)
+                );
+
+        }
+
+
+        .profile:hover {
+
+            transform:
+                rotate(360deg);
+
+            background:
+                linear-gradient(
+                    135deg,
+                    var(--red),
+                    var(--orange)
+                );
+
+            box-shadow:
+                0 0 25px
+                rgba(229,9,20,0.5);
+
+        }
+
+
+        /* =========================================
+           HERO
+        ========================================= */
+
+        .hero {
+
+            min-height: 600px;
+
+            padding:
+                65px 6% 100px;
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 65px;
+
+            position: relative;
+
+            overflow: hidden;
+
+            background:
+
+                radial-gradient(
+                    circle at 10% 20%,
+                    rgba(229,9,20,0.16),
+                    transparent 25%
+                ),
+
+                radial-gradient(
+                    circle at 85% 30%,
+                    rgba(139,44,255,0.12),
+                    transparent 25%
+                ),
+
+                linear-gradient(
+                    135deg,
+                    #070707,
+                    #11131a,
+                    #0b0b10
+                );
+
+        }
+
+
+        /* Floating Background Circles */
+
+        .hero::before {
+
+            content: "";
+
+            position: absolute;
+
+            width: 380px;
+
+            height: 380px;
+
+            border-radius: 50%;
+
+            background:
+                radial-gradient(
+                    circle,
+                    rgba(229,9,20,0.12),
+                    transparent 70%
+                );
+
+            top: -100px;
+
+            left: -100px;
+
+            animation:
+                floatGlow 8s ease-in-out infinite;
+
+        }
+
+
+        .hero::after {
+
+            content: "";
+
+            position: absolute;
+
+            width: 350px;
+
+            height: 350px;
+
+            border-radius: 50%;
+
+            background:
+                radial-gradient(
+                    circle,
+                    rgba(255,107,53,0.08),
+                    transparent 70%
+                );
+
+            right: -100px;
+
+            bottom: -100px;
+
+            animation:
+                floatGlow 10s ease-in-out infinite reverse;
+
+        }
+
+
+        /* =========================================
+           HERO IMAGE
+        ========================================= */
+
+        .hero-image {
+
+            width: 57%;
+
+            height: 410px;
+
+            position: relative;
+
+            z-index: 2;
+
+            border-radius: 22px;
+
+            overflow: hidden;
+
+            animation:
+                slideFromLeft 1s ease;
+
+            box-shadow:
+
+                0 25px 70px
+                rgba(0,0,0,0.65),
+
+                0 0 45px
+                rgba(229,9,20,0.12);
+
+        }
+
+
+        .hero-image::before {
+
+            content: "";
+
+            position: absolute;
+
+            inset: 0;
+
+            z-index: 1;
+
+            background:
+
+                linear-gradient(
+                    120deg,
+                    rgba(229,9,20,0.15),
+                    transparent 40%,
+                    rgba(139,44,255,0.12)
+                );
+
+        }
+
+
+        .hero-image img {
+
+            width: 100%;
+
+            height: 100%;
+
+            object-fit: cover;
+
+            display: block;
+
+            transition: 1s;
+
+            animation:
+                imageZoom 12s ease-in-out infinite alternate;
+
+        }
+
+
+        .hero-image:hover img {
+
+            transform:
+                scale(1.1);
+
+        }
+
+
+        /* =========================================
+           HERO TEXT
+        ========================================= */
+
+        .hero-text {
+
+            flex: 1;
+
+            z-index: 2;
+
+            animation:
+                slideFromRight 1s ease;
+
+        }
+
+
+        .hero-text h1 {
+
+            font-size:
+                clamp(43px, 5vw, 68px);
+
+            line-height: 1.05;
+
+            margin-bottom: 24px;
+
+            font-weight: 800;
+
+        }
+
+
+        .hero-text h1 span {
+
+            background:
+
+                linear-gradient(
+                    90deg,
+                    var(--red),
+                    var(--orange),
+                    var(--pink),
+                    var(--purple)
+                );
+
+            background-size: 300%;
+
+            -webkit-background-clip: text;
+
+            -webkit-text-fill-color: transparent;
+
+            animation:
+                gradientMove 6s linear infinite;
+
+        }
+
+
+        .hero-text p {
+
+            font-size: 19px;
+
+            line-height: 1.7;
+
+            color: #b8bbc2;
+
+            max-width: 480px;
+
+            margin-bottom: 25px;
+
+        }
+
+
+        .explore-btn {
+
+            display: inline-block;
+
+            padding: 14px 30px;
+
+            border-radius: 30px;
+
+            border: none;
+
+            color: white;
+
+            text-decoration: none;
+
+            font-weight: 600;
+
+            cursor: pointer;
+
+            background:
+
+                linear-gradient(
+                    90deg,
+                    var(--red),
+                    var(--orange),
+                    var(--pink)
+                );
+
+            background-size: 200%;
+
+            animation:
+                gradientMove 4s linear infinite;
+
+            box-shadow:
+                0 10px 30px
+                rgba(229,9,20,0.3);
+
+            transition: 0.4s;
+
+        }
+
+
+        .explore-btn:hover {
+
+            transform:
+                translateY(-4px) scale(1.04);
+
+            box-shadow:
+                0 15px 40px
+                rgba(229,9,20,0.5);
+
+        }
+
+
+        /* =========================================
+           SEARCH AREA
+        ========================================= */
+
+        .search-wrapper {
+
+            width: 88%;
+
+            max-width: 1000px;
+
+            margin:
+                -45px auto 55px;
+
+            position: relative;
+
+            z-index: 10;
+
+            animation:
+                fadeUp 1.2s ease;
+
+        }
+
+
+        .search-box {
+
+            display: flex;
+
+            align-items: center;
+
+            background:
+                rgba(23,25,31,0.96);
+
+            backdrop-filter:
+                blur(15px);
+
+            border:
+                1px solid
+                rgba(255,255,255,0.1);
+
+            border-radius: 15px;
+
+            padding: 8px;
+
+            box-shadow:
+
+                0 18px 50px
+                rgba(0,0,0,0.6),
+
+                0 0 30px
+                rgba(229,9,20,0.08);
+
+        }
+
+
+        .search-item {
+
+            flex: 1;
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 12px;
+
+            height: 58px;
+
+            padding: 0 20px;
+
+            border-right:
+                1px solid #34363d;
+
+        }
+
+
+        .search-icon {
+
+            font-size: 20px;
+
+        }
+
+
+        .search-item input {
+
+            width: 100%;
+
+            background: transparent;
+
+            border: none;
+
+            outline: none;
+
+            color: white;
+
+            font-family: inherit;
+
+            font-size: 15px;
+
+        }
+
+
+        .search-item input::placeholder {
+
+            color: #9ea1a8;
+
+        }
+
+
+        .search-button {
+
+            height: 58px;
+
+            padding: 0 32px;
+
+            border: none;
+
+            border-radius: 10px;
+
+            color: white;
+
+            font-size: 15px;
+
+            font-weight: 600;
+
+            cursor: pointer;
+
+            background:
+
+                linear-gradient(
+                    90deg,
+                    var(--red),
+                    var(--orange),
+                    var(--pink)
+                );
+
+            background-size: 200%;
+
+            transition: 0.3s;
+
+            animation:
+                gradientMove 4s linear infinite;
+
+        }
+
+
+        .search-button:hover {
+
+            transform:
+                scale(1.04);
+
+            box-shadow:
+                0 0 25px
+                rgba(229,9,20,0.45);
+
+        }
+
+
+        /* =========================================
+           SERVICES
+        ========================================= */
+
+        .services {
+
+            padding:
+                10px 6% 80px;
+
+        }
+
+
+        .section-heading {
+
+            text-align: center;
+
+            margin-bottom: 35px;
+
+            animation:
+                fadeUp 1s ease;
+
+        }
+
+
+        .section-heading h2 {
+
+            font-size: 32px;
+
+            margin-bottom: 10px;
+
+        }
+
+
+        .section-heading h2 span {
+
+            color: var(--bright-red);
+
+        }
+
+
+        .section-heading p {
+
+            color: var(--gray);
+
+            font-size: 15px;
+
+        }
+
+
+        .service-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(4, 1fr);
+
+            gap: 25px;
+
+        }
+
+
+        .service-card {
+
+            height: 250px;
+
+            position: relative;
+
+            overflow: hidden;
+
+            border-radius: 18px;
+
+            cursor: pointer;
+
+            border:
+                1px solid
+                rgba(255,255,255,0.1);
+
+            background:
+                var(--card);
+
+            transition:
+                0.5s;
+
+            animation:
+                fadeUp 1s ease;
+
+        }
+
+
+        .service-card:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .service-card:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .service-card:nth-child(4) {
+            animation-delay: 0.45s;
+        }
+
+
+        .service-card:hover {
+
+            transform:
+                translateY(-12px) scale(1.02);
+
+            border-color:
+                rgba(255,50,60,0.6);
+
+            box-shadow:
+
+                0 25px 45px
+                rgba(0,0,0,0.6),
+
+                0 0 35px
+                rgba(229,9,20,0.15);
+
+        }
+
+
+        .service-card img {
+
+            width: 100%;
+
+            height: 100%;
+
+            object-fit: cover;
+
+            transition: 0.7s;
+
+        }
+
+
+        .service-card:hover img {
+
+            transform:
+                scale(1.15);
+
+        }
+
+
+        .service-card::after {
+
+            content: "";
+
+            position: absolute;
+
+            inset: 0;
+
+            background:
+
+                linear-gradient(
+                    to top,
+                    rgba(0,0,0,0.95),
+                    rgba(0,0,0,0.1)
+                );
+
+        }
+
+
+        .service-content {
+
+            position: absolute;
+
+            left: 0;
+
+            bottom: 0;
+
+            width: 100%;
+
+            padding: 25px;
+
+            z-index: 2;
+
+        }
+
+
+        .service-content h2 {
+
+            font-size: 21px;
+
+            margin-bottom: 8px;
+
+        }
+
+
+        .service-content p {
+
+            font-size: 13px;
+
+            color: #c4c6ca;
+
+        }
+
+
+        .service-arrow {
+
+            position: absolute;
+
+            top: 18px;
+
+            right: 18px;
+
+            z-index: 3;
+
+            width: 40px;
+
+            height: 40px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            border-radius: 50%;
+
+            background:
+
+                linear-gradient(
+                    135deg,
+                    var(--red),
+                    var(--orange)
+                );
+
+            opacity: 0;
+
+            transform:
+                translateX(-15px);
+
+            transition: 0.4s;
+
+            font-size: 20px;
+
+        }
+
+
+        .service-card:hover .service-arrow {
+
+            opacity: 1;
+
+            transform:
+                translateX(0);
+
+        }
+
+
+        /* =========================================
+           FEATURES
+        ========================================= */
+
+        .features {
+
+            padding:
+                65px 6%;
+
+            background:
+
+                linear-gradient(
+                    135deg,
+                    rgba(229,9,20,0.06),
+                    rgba(139,44,255,0.05),
+                    rgba(255,107,53,0.05)
+                );
+
+            border-top:
+                1px solid rgba(255,255,255,0.06);
+
+            border-bottom:
+                1px solid rgba(255,255,255,0.06);
+
+        }
+
+
+        .feature-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            gap: 30px;
+
+        }
+
+
+        .feature {
+
+            text-align: center;
+
+            padding: 30px;
+
+            border-radius: 18px;
+
+            background:
+                rgba(255,255,255,0.025);
+
+            border:
+                1px solid rgba(255,255,255,0.06);
+
+            transition: 0.4s;
+
+        }
+
+
+        .feature:hover {
+
+            transform:
+                translateY(-8px);
+
+            background:
+                rgba(229,9,20,0.07);
+
+        }
+
+
+        .feature-icon {
+
+            width: 65px;
+
+            height: 65px;
+
+            margin:
+                0 auto 18px;
+
+            border-radius: 18px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 30px;
+
+            background:
+
+                linear-gradient(
+                    135deg,
+                    var(--red),
+                    var(--orange),
+                    var(--purple)
+                );
+
+            box-shadow:
+                0 10px 30px
+                rgba(229,9,20,0.2);
+
+        }
+
+
+        .feature h3 {
+
+            margin-bottom: 10px;
+
+        }
+
+
+        .feature p {
+
+            color: var(--gray);
+
+            font-size: 14px;
+
+            line-height: 1.6;
+
+        }
+
+
+        /* =========================================
+           CONTACT SECTION
+        ========================================= */
+
+        .contact-section {
+
+            padding:
+                80px 6%;
+
+            position: relative;
+
+            overflow: hidden;
+
+            background:
+
+                radial-gradient(
+                    circle at 20% 50%,
+                    rgba(229,9,20,0.12),
+                    transparent 30%
+                ),
+
+                radial-gradient(
+                    circle at 80% 50%,
+                    rgba(139,44,255,0.1),
+                    transparent 30%
+                ),
+
+                #0a0b0f;
+
+        }
+
+
+        .contact-section::before {
+
+            content: "";
+
+            position: absolute;
+
+            width: 350px;
+
+            height: 350px;
+
+            border-radius: 50%;
+
+            background:
+                rgba(255,107,53,0.06);
+
+            filter:
+                blur(70px);
+
+            left: -100px;
+
+            top: 30px;
+
+        }
+
+
+        .contact-title {
+
+            text-align: center;
+
+            position: relative;
+
+            z-index: 2;
+
+            margin-bottom: 40px;
+
+        }
+
+
+        .contact-title h2 {
+
+            font-size: 34px;
+
+            margin-bottom: 10px;
+
+        }
+
+
+        .contact-title span {
+
+            background:
+
+                linear-gradient(
+                    90deg,
+                    var(--red),
+                    var(--orange),
+                    var(--pink)
+                );
+
+            -webkit-background-clip: text;
+
+            -webkit-text-fill-color: transparent;
+
+        }
+
+
+        .contact-title p {
+
+            color: var(--gray);
+
+        }
+
+
+        .contact-grid {
+
+            max-width: 950px;
+
+            margin: auto;
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            gap: 25px;
+
+            position: relative;
+
+            z-index: 2;
+
+        }
+
+
+        .contact-card {
+
+            padding: 30px 20px;
+
+            text-align: center;
+
+            border-radius: 20px;
+
+            background:
+
+                linear-gradient(
+                    145deg,
+                    rgba(255,255,255,0.06),
+                    rgba(255,255,255,0.02)
+                );
+
+            border:
+                1px solid rgba(255,255,255,0.1);
+
+            transition: 0.4s;
+
+        }
+
+
+        .contact-card:hover {
+
+            transform:
+                translateY(-10px);
+
+            border-color:
+                rgba(255,45,55,0.6);
+
+            box-shadow:
+                0 20px 40px
+                rgba(0,0,0,0.4);
+
+        }
+
+
+        .contact-card .contact-icon {
+
+            font-size: 36px;
+
+            margin-bottom: 15px;
+
+        }
+
+
+        .contact-card h3 {
+
+            margin-bottom: 10px;
+
+        }
+
+
+        .contact-card a {
+
+            color: var(--bright-red);
+
+            text-decoration: none;
+
+            font-size: 14px;
+
+            word-break: break-word;
+
+            transition: 0.3s;
+
+        }
+
+
+        .contact-card a:hover {
+
+            color: var(--orange);
+
+        }
+
+
+        /* =========================================
+           FOOTER
+        ========================================= */
+
+        footer {
+
+            padding: 30px;
+
+            text-align: center;
+
+            color: #777b83;
+
+            background: #050505;
+
+            border-top:
+                1px solid rgba(255,255,255,0.06);
+
+            font-size: 13px;
+
+        }
+
+
+        footer span {
+
+            color: var(--bright-red);
+
+            font-weight: 600;
+
+        }
+
+
+        /* =========================================
+           ANIMATIONS
+        ========================================= */
+
+        @keyframes gradientMove {
+
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 200% 50%;
+            }
+
+        }
+
+
+        @keyframes slideFromLeft {
+
+            from {
+
+                opacity: 0;
+
+                transform:
+                    translateX(-70px);
+
+            }
+
+            to {
+
+                opacity: 1;
+
+                transform:
+                    translateX(0);
+
+            }
+
+        }
+
+
+        @keyframes slideFromRight {
+
+            from {
+
+                opacity: 0;
+
+                transform:
+                    translateX(70px);
+
+            }
+
+            to {
+
+                opacity: 1;
+
+                transform:
+                    translateX(0);
+
+            }
+
+        }
+
+
+        @keyframes fadeUp {
+
+            from {
+
+                opacity: 0;
+
+                transform:
+                    translateY(40px);
+
+            }
+
+            to {
+
+                opacity: 1;
+
+                transform:
+                    translateY(0);
+
+            }
+
+        }
+
+
+        @keyframes imageZoom {
+
+            from {
+                transform: scale(1);
+            }
+
+            to {
+                transform: scale(1.08);
+            }
+
+        }
+
+
+        @keyframes floatGlow {
+
+            0%,
+            100% {
+
+                transform:
+                    translate(0, 0);
+
+            }
+
+            50% {
+
+                transform:
+                    translate(40px, 30px);
+
+            }
+
+        }
+
+
+        /* =========================================
+           TABLET
+        ========================================= */
+
+        @media (max-width: 1050px) {
+
+            nav {
+                gap: 18px;
+            }
+
+
+            .hero {
+
+                gap: 35px;
+
+            }
+
+
+            .hero-image {
+
+                width: 54%;
+
+            }
+
+
+            .service-grid {
+
+                grid-template-columns:
+                    repeat(2, 1fr);
+
+            }
+
+
+            .contact-grid {
+
+                grid-template-columns:
+                    repeat(3, 1fr);
+
+            }
+
+        }
+
+
+        /* =========================================
+           MOBILE
+        ========================================= */
+
+        @media (max-width: 800px) {
+
+            header {
+
+                height: auto;
+
+                padding:
+                    15px 5%;
+
+                flex-wrap: wrap;
+
+                gap: 15px;
+
+            }
+
+
+            nav {
+
+                width: 100%;
+
+                order: 3;
+
+                justify-content: center;
+
+                flex-wrap: wrap;
+
+            }
+
+
+            .hero {
+
+                flex-direction: column;
+
+                min-height: auto;
+
+                padding:
+                    45px 6% 75px;
+
+            }
+
+
+            .hero-image {
+
+                width: 100%;
+
+                height: 360px;
+
+            }
+
+
+            .hero-text {
+
+                text-align: center;
+
+            }
+
+
+            .hero-text p {
+
+                margin:
+                    0 auto 25px;
+
+            }
+
+
+            .search-wrapper {
+
+                margin:
+                    -25px auto 50px;
+
+            }
+
+
+            .feature-grid {
+
+                grid-template-columns:
+                    1fr;
+
+            }
+
+
+            .contact-grid {
+
+                grid-template-columns:
+                    1fr;
+
+            }
+
+        }
+
+
+        @media (max-width: 600px) {
+
+            .logo {
+
+                font-size: 20px;
+
+            }
+
+
+            .login-area {
+
+                display: none;
+
+            }
+
+
+            .hero-image {
+
+                height: 260px;
+
+            }
+
+
+            .hero-text h1 {
+
+                font-size: 40px;
+
+            }
+
+
+            .hero-text p {
+
+                font-size: 16px;
+
+            }
+
+
+            .search-box {
+
+                flex-direction: column;
+
+                padding: 8px;
+
+            }
+
+
+            .search-item {
+
+                width: 100%;
+
+                border-right: none;
+
+                border-bottom:
+                    1px solid #30333a;
+
+            }
+
+
+            .search-button {
+
+                width: 100%;
+
+            }
+
+
+            .service-grid {
+
+                grid-template-columns:
+                    1fr;
+
+            }
+
+
+            .service-card {
+
+                height: 240px;
+
+            }
+
+        }
+
+
+/* =========================================
+   ENHANCED COLORFUL ICONS
+========================================= */
+
+.service-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.service-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+        to top,
+        rgba(0,0,0,0.95) 5%,
+        rgba(0,0,0,0.45) 52%,
+        rgba(0,0,0,0.08)
+    );
+    transition: 0.5s;
+}
+
+.service-card:hover .service-overlay {
+    background: linear-gradient(
+        to top,
+        rgba(0,0,0,0.97),
+        rgba(100,0,30,0.38),
+        rgba(0,0,0,0.08)
+    );
+}
+
+.animated-icon {
+    position: absolute;
+    top: 22px;
+    left: 22px;
+    width: 62px;
+    height: 62px;
+    border-radius: 19px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    font-size: 27px;
+    color: #fff;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.35);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.42);
+    animation: floatingIcon 3s ease-in-out infinite;
+    transition: 0.4s;
+}
+
+.accommodation-card .animated-icon {
+    background: linear-gradient(135deg,#ff7b00,#ff1744,#ff006e);
+    box-shadow: 0 0 30px rgba(255,23,68,0.45);
+}
+
+.bike-card .animated-icon {
+    background: linear-gradient(135deg,#00c6ff,#0072ff,#6a00ff);
+    box-shadow: 0 0 30px rgba(0,114,255,0.45);
+}
+
+.equipment-card .animated-icon {
+    background: linear-gradient(135deg,#00e676,#00bcd4,#0077ff);
+    box-shadow: 0 0 30px rgba(0,230,118,0.4);
+}
+
+.planner-card .animated-icon {
+    background: linear-gradient(135deg,#ffb300,#ff5722,#e91e63);
+    box-shadow: 0 0 30px rgba(255,87,34,0.45);
+}
+
+@keyframes floatingIcon {
+    0%,100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-8px) rotate(3deg); }
+}
+
+.service-card:hover .animated-icon {
+    transform: scale(1.15) rotate(-8deg);
+    border-radius: 50%;
+}
+
+.service-content {
+    z-index: 6;
+    transition: 0.4s;
+}
+
+.service-card:hover .service-content {
+    transform: translateY(-5px);
+}
+
+.service-arrow {
+    z-index: 7;
+}
+
+.service-arrow i {
+    transition: 0.4s;
+}
+
+.service-card:hover .service-arrow i {
+    transform: rotate(360deg);
+}
+
+/* Search icons */
+.search-icon {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    transition: 0.4s;
+}
+
+.location-icon {
+    background: linear-gradient(135deg,#ff1744,#ff7b00);
+    box-shadow: 0 0 18px rgba(255,23,68,0.35);
+    animation: locationPulse 2s infinite;
+}
+
+.calendar-icon {
+    background: linear-gradient(135deg,#7b2cff,#00a8ff);
+    box-shadow: 0 0 18px rgba(123,44,255,0.35);
+}
+
+@keyframes locationPulse {
+    0%,100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(255,23,68,0);
+    }
+    50% {
+        transform: scale(1.08);
+        box-shadow: 0 0 25px rgba(255,23,68,0.55);
+    }
+}
+
+.search-button i {
+    margin-right: 8px;
+    transition: 0.3s;
+}
+
+.search-button:hover i {
+    transform: rotate(-15deg) scale(1.2);
+}
+
+/* Feature icon animation */
+.feature-icon i {
+    transition: 0.4s;
+}
+
+.feature:hover .feature-icon i {
+    transform: scale(1.15) rotate(-8deg);
+}
+
+/* Compact contact section */
+.contact-section {
+    padding: 45px 6% 50px;
+}
+
+.contact-title {
+    margin-bottom: 25px;
+}
+
+.contact-title h2 {
+    font-size: 28px;
+}
+
+.contact-title p {
+    font-size: 13px;
+}
+
+.contact-grid {
+    max-width: 700px;
+    gap: 14px;
+}
+
+.contact-card {
+    min-height: 110px;
+    padding: 17px 14px;
+    border-radius: 13px;
+}
+
+.contact-card .contact-icon {
+    width: 38px;
+    height: 38px;
+    margin: 0 auto 8px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: white;
+    transition: 0.4s;
+}
+
+.email-contact-icon {
+    background: linear-gradient(135deg,#ff1744,#ff7b00);
+    animation: contactFloat 3s infinite ease-in-out;
+}
+
+.instagram-contact-icon {
+    background: linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);
+    animation: contactFloat 3s infinite ease-in-out 0.4s;
+}
+
+.facebook-contact-icon {
+    background: linear-gradient(135deg,#1877f2,#00a8ff);
+    animation: contactFloat 3s infinite ease-in-out 0.8s;
+}
+
+.contact-card:hover .contact-icon {
+    transform: translateY(-4px) scale(1.1) rotate(-5deg);
+}
+
+@keyframes contactFloat {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+.contact-card h3 {
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.contact-card a {
+    font-size: 11px;
+}
+
+/* Mobile */
+@media (max-width: 800px) {
+    .contact-grid {
+        max-width: 500px;
+    }
+}
+
+@media (max-width: 600px) {
+    .animated-icon {
+        width: 56px;
+        height: 56px;
+        font-size: 24px;
+    }
+
+    .contact-section {
+        padding: 40px 6% 45px;
+    }
+}
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================================
+         HEADER
+    ========================================== -->
+
+    <header>
+
+
+        <div
+            class="logo"
+            onclick="window.location.href='index.html'"
+        >
+
+            <div class="logo-icon"></div>
+
+            <span>
+                Tour Guide
+            </span>
+
+        </div>
+
+
+        <nav>
+
+            <a
+                href="index.html"
+                class="active"
+            >
+                Home
+            </a>
+
+            <a href="accommodation.html">
+                Accommodation
+            </a>
+
+            <a href="bikes.html">
+                Bikes
+            </a>
+
+            <a href="equipment.html">
+                Equipment
+            </a>
+
+            <a href="trip-planner.html">
+                Trip Planner
+            </a>
+
+        </nav>
+
+
+        <div class="login-area">
+
+            <a href="login.html">
+                Login
+            </a>
+
+            <span>|</span>
+
+            <a href="signup.html">
+                Sign Up
+            </a>
+
+            <div
+                class="profile"
+                onclick="window.location.href='login.html'"
+            >
+                ♙
+            </div>
+
+        </div>
+
+
+    </header>
+
+
+
+    <!-- =========================================
+         HERO SECTION
+    ========================================== -->
+
+    <section class="hero">
+
+
+        <div class="hero-image">
+
+            <img
+                src="images/hero-banner.jpg"
+                alt="Beautiful Sri Lankan tourist destination"
+            >
+
+        </div>
+
+
+        <div class="hero-text">
+
+            <h1>
+
+                Explore Your
+                <br>
+
+                <span>
+                    Dream Destination
+                </span>
+
+            </h1>
+
+
+            <p>
+
+                Discover amazing places, book your perfect stay,
+                rent bikes and adventure equipment, and plan
+                unforgettable journeys with experienced local guides.
+
+            </p>
+
+
+            <a
+                href="#services"
+                class="explore-btn"
+            >
+                Start Exploring →
+            </a>
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =========================================
+         SEARCH SECTION
+    ========================================== -->
+
+    <div class="search-wrapper">
+
+
+        <div class="search-box">
+
+
+            <div class="search-item">
+
+                <span class="search-icon location-icon">
+                    <i class="fa-solid fa-location-dot"></i>
+                </span>
+
+                <input
+                    type="text"
+                    id="location"
+                    placeholder="Enter Location"
+                >
+
+            </div>
+
+
+
+            <div class="search-item">
+
+                <span class="search-icon calendar-icon">
+                    <i class="fa-solid fa-calendar-days"></i>
+                </span>
+
+                <input
+                    type="date"
+                    id="travelDate"
+                >
+
+            </div>
+
+
+
+            <button
+                class="search-button"
+                onclick="performSearch()"
+            >
+                <i class="fa-solid fa-magnifying-glass"></i> Search
+            </button>
+
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- =========================================
+         SERVICES
+    ========================================== -->
+
+    <section
+        class="services"
+        id="services"
+    >
+
+
+        <div class="section-heading">
+
+            <h2>
+                Everything for Your
+                <span>
+                    Perfect Trip
+                </span>
+            </h2>
+
+            <p>
+                Choose what you need and start your adventure.
+            </p>
+
+        </div>
+
+
+
+        <div class="service-grid">
+
+
+            <!-- Accommodation -->
+
+            <div
+                class="service-card"
+                onclick="
+                    window.location.href='accommodation.html'
+                "
+            >
+
+                <img
+                    src="images/accommodation.jpg"
+                    alt="Accommodation"
+                >
+
+
+                <div class="service-content">
+
+                    <h2>
+                        Accommodation
+                    </h2>
+
+                    <p>
+                        Villas, apartments and rooms
+                    </p>
+
+                </div>
+
+
+                <div class="service-arrow">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+
+            </div>
+
+
+
+            <!-- Bikes -->
+
+            <div
+                class="service-card"
+                onclick="
+                    window.location.href='bikes.html'
+                "
+            >
+
+                <img
+                    src="images/bikes.jpg"
+                    alt="Bike Rental"
+                >
+
+
+                <div class="service-content">
+
+                    <h2>
+                        Bikes Rent
+                    </h2>
+
+                    <p>
+                        Explore your destination freely
+                    </p>
+
+                </div>
+
+
+                <div class="service-arrow">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+
+            </div>
+
+
+
+            <!-- Equipment -->
+
+            <div
+                class="service-card"
+                onclick="
+                    window.location.href='equipment.html'
+                "
+            >
+
+                <img
+                    src="images/equipment.jpg"
+                    alt="Equipment Rental"
+                >
+
+
+                <div class="service-content">
+
+                    <h2>
+                        Other Equipment
+                    </h2>
+
+                    <p>
+                        Surfboards, boats and more
+                    </p>
+
+                </div>
+
+
+                <div class="service-arrow">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+
+            </div>
+
+
+
+            <!-- Trip Planner -->
+
+            <div
+                class="service-card"
+                onclick="
+                    window.location.href='trip-planner.html'
+                "
+            >
+
+                <img
+                    src="images/trip-planner.jpg"
+                    alt="Trip Planner"
+                >
+
+
+                <div class="service-content">
+
+                    <h2>
+                        Trip Planner
+                    </h2>
+
+                    <p>
+                        Plan trips with local guides
+                    </p>
+
+                </div>
+
+
+                <div class="service-arrow">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =========================================
+         FEATURES
+    ========================================== -->
+
+    <section class="features">
+
+
+        <div class="feature-grid">
+
+
+            <div class="feature">
+
+                <div class="feature-icon"><i class="fa-solid fa-house"></i></div>
+
+                <h3>
+                    Trusted Stays
+                </h3>
+
+                <p>
+                    Discover villas, apartments and rooms
+                    suitable for your budget and journey.
+                </p>
+
+            </div>
+
+
+
+            <div class="feature">
+
+                <div class="feature-icon"><i class="fa-solid fa-bicycle"></i></div>
+
+                <h3>
+                    Easy Rentals
+                </h3>
+
+                <p>
+                    Rent bikes and adventure equipment
+                    easily for your travel experience.
+                </p>
+
+            </div>
+
+
+
+            <div class="feature">
+
+                <div class="feature-icon"><i class="fa-solid fa-map-location-dot"></i></div>
+
+                <h3>
+                    Local Experts
+                </h3>
+
+                <p>
+                    Find highly rated guides and plan
+                    unforgettable trips around your destination.
+                </p>
+
+            </div>
+
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =========================================
+         CONTACT
+    ========================================== -->
+
+    <section class="contact-section">
+
+
+        <div class="contact-title">
+
+            <h2>
+                Get In <span>Touch</span>
+            </h2>
+
+            <p>
+                Contact me for more information about Tour Guide.
+            </p>
+
+        </div>
+
+
+        <div class="contact-grid">
+
+
+            <!-- EMAIL -->
+
+            <div class="contact-card">
+
+                <div class="contact-icon email-contact-icon"><i class="fa-solid fa-envelope"></i></div>
+
+                <h3>
+                    Email
+                </h3>
+
+                <a href="mailto:anudapasandulwork@gmail.com">
+                    anudapasandulwork@gmail.com
+                </a>
+
+            </div>
+
+
+
+            <!-- INSTAGRAM -->
+
+            <div class="contact-card">
+
+                <div class="contact-icon instagram-contact-icon"><i class="fa-brands fa-instagram"></i></div>
+
+                <h3>
+                    Instagram
+                </h3>
+
+                <a
+                    href="https://www.instagram.com/anu_da_pasandul/"
+                    target="_blank"
+                >
+                    @anu_da_pasandul
+                </a>
+
+            </div>
+
+
+
+            <!-- FACEBOOK -->
+
+            <div class="contact-card">
+
+                <div class="contact-icon facebook-contact-icon"><i class="fa-brands fa-facebook-f"></i></div>
+
+                <h3>
+                    Facebook
+                </h3>
+
+                <a
+                    href="#"
+                    onclick="alert('Facebook: anuda pasandul')"
+                >
+                    anuda pasandul
+                </a>
+
+            </div>
+
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =========================================
+         FOOTER
+    ========================================== -->
+
+    <footer>
+
+        © 2026
+
+        <span>
+            Tour Guide
+        </span>
+
+        | Explore • Rent • Experience
+
+        <br><br>
+
+        Designed for unforgettable journeys.
+
+    </footer>
+
+
+
+    <!-- =========================================
+         JAVASCRIPT
+    ========================================== -->
+
+    <script>
+
+
+        function performSearch() {
+
+            const location =
+
+                document
+                    .getElementById("location")
+                    .value
+                    .trim();
+
+
+            const date =
+
+                document
+                    .getElementById("travelDate")
+                    .value;
+
+
+            if (location === "") {
+
+                alert(
+                    "Please enter your destination."
+                );
+
+                return;
+
+            }
+
+
+            if (date === "") {
+
+                alert(
+                    "Please select your travel date."
+                );
+
+                return;
+
+            }
+
+
+            window.location.href =
+                "accommodation.html?location="
+                + encodeURIComponent(location)
+                + "&date="
+                + encodeURIComponent(date);
+
+        }
+
+
+        /* Smooth card animation on page load */
+
+        window.addEventListener(
+            "load",
+            function () {
+
+                document.body.style.opacity = "1";
+
+            }
+        );
+
+
+    </script>
+
+
+</body>
+
+</html>
