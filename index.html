@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TourGuide — Discover, Book & Explore</title>
+  <meta name="description"
+    content="Find and book premium accommodations, bikes, rental equipment, and expert tour guides for your next adventure. TourGuide makes travel effortless.">
+  <meta name="keywords" content="tour guide, accommodation, bike rental, equipment rental, travel booking">
+    <script>
+      try { document.documentElement.dataset.theme = localStorage.getItem('tourguide_theme') || 'light'; } catch (error) {}
+    </script>
+  <link rel="stylesheet" href="style.css?v=20261017-3">
+  <!-- Leaflet for map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+
+<body>
+
+  <!-- ── Toast Container ──────────────────────────────────────────────────── -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ── Navbar ────────────────────────────────────────────────────────────── -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo" onclick="navigateTo('home')">
+        <div class="nav-logo-icon">🧭</div>
+        TourGuide
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#" class="nav-link active" data-page="home" onclick="navigateTo('home')">Home</a></li>
+        <li><a href="#" class="nav-link" data-page="accommodation"
+            onclick="navigateTo('accommodation')">Accommodation</a></li>
+        <li><a href="#" class="nav-link" data-page="bikes" onclick="navigateTo('bikes')">Bikes</a></li>
+        <li><a href="#" class="nav-link" data-page="equipment" onclick="navigateTo('equipment')">Equipment</a></li>
+        <li><a href="#" class="nav-link" data-page="guides" onclick="navigateTo('guides')">Guides</a></li>
+      </ul>
+
+      <div class="nav-right">
+        <button class="currency-toggle-btn" id="currency-toggle-btn" onclick="toggleCurrency()" title="Switch Currency (USD / LKR)">
+          <span class="curr-icon">💱</span>
+          <span class="curr-label" id="curr-label">USD ($)</span>
+        </button>
+          <button class="currency-toggle-btn theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Switch to dark theme" aria-label="Switch to dark theme">
+            <span id="theme-toggle-icon" aria-hidden="true">🌙</span>
+            <span id="theme-toggle-label">Dark</span>
+          </button>
+        <button class="nav-profile-btn" id="nav-profile-btn"
+          onclick="State.user ? navigateTo('profile') : openAuthModal()">
+          <span class="nav-avatar">👤</span>Sign In
+        </button>
+        <button class="hamburger" id="hamburger-btn" onclick="toggleMobileNav()" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Nav -->
+    <div class="mobile-nav" id="mobile-nav">
+      <a href="#" onclick="navigateTo('home')">🏠 Home</a>
+      <a href="#" onclick="navigateTo('accommodation')">🏨 Accommodation</a>
+      <a href="#" onclick="navigateTo('bikes')">🚲 Bikes</a>
+      <a href="#" onclick="navigateTo('equipment')">🏄 Equipment</a>
+      <a href="#" onclick="navigateTo('guides')">🧭 Guides</a>
+      <a href="#" onclick="toggleCurrency()">💱 Currency: <span id="mobile-curr-label">USD ($)</span></a>
+        <a href="#" id="mobile-theme-toggle" onclick="return toggleTheme()">🌙 Switch to dark theme</a>
+      <a href="#" onclick="State.user ? navigateTo('profile') : openAuthModal()">👤 Profile</a>
+    </div>
+  </nav>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- HOME PAGE                                                                -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="page active" id="page-home">
+
+    <!-- Hero -->
+    <section id="hero">
+      <div class="hero-bg">
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-orb hero-orb-3"></div>
+      </div>
+      <div class="container">
+        <div class="hero-grid">
+          <div class="hero-content">
+            <div class="hero-badge">
+              <span></span>
+              Your Premium Travel Platform
+            </div>
+            <h1 class="hero-title">
+              Discover &amp;<br>
+              <span class="gradient-text">Book Your</span><br>
+              Next Adventure
+            </h1>
+            <p class="hero-desc">
+              Find and reserve premium accommodations, rental bikes, equipment, and expert local tour guides — all in
+              one place, with instant confirmation.
+            </p>
+            <div class="hero-actions">
+              <button class="btn btn-primary btn-lg" onclick="navigateTo('accommodation')">
+                🏨 Browse Stays
+              </button>
+              <button class="btn btn-outline btn-lg" onclick="navigateTo('guides')">
+                🧭 Find a Guide
+              </button>
+              <button class="btn btn-currency-hero btn-lg" onclick="toggleCurrency()" title="Switch Currency between USD and LKR">
+                💱 <span id="hero-curr-label">USD ($)</span> ⇄ LKR
+              </button>
+            </div>
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <div class="hero-stat-num">500+</div>
+                <div class="hero-stat-label">Listings</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-num">50+</div>
+                <div class="hero-stat-label">Guides</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-num">20+</div>
+                <div class="hero-stat-label">Destinations</div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-visual">
+            <div class="hero-card-stack">
+              <div class="hero-card">
+                <div class="hero-card-img-wrap">
+                  <img src="image/hero-travel.jpg" alt="Ultra Luxury Beach Villa &amp; Infinity Pool" class="hero-card-img" onerror="this.src='image/accommodation/acc-villa-1.jpg'">
+                  <div class="hero-card-overlay"></div>
+                </div>
+                <div class="hero-card-info">
+                  <div class="hero-card-badge">⭐ Top Featured Stay</div>
+                  <div class="hero-card-name">Ultra Luxury Beach Villa &amp; Infinity Pool</div>
+                  <div class="hero-card-loc">📍 Mirissa &amp; Southern Coast, Sri Lanka</div>
+                  <div class="hero-card-price">$260<span style="font-size:0.8rem;color:var(--text-secondary)">/night</span></div>
+                </div>
+              </div>
+              <div class="hero-floating-badge hero-floating-1">
+                <div style="font-size:0.75rem;color:var(--text-muted)">Guest Rating</div>
+                <div style="font-weight:700;font-size:0.92rem;color:var(--accent-yellow)">⭐ 4.98 / 5.0</div>
+              </div>
+              <div class="hero-floating-badge hero-floating-2">
+                <div style="font-size:0.75rem;color:var(--text-muted)">PayHere Verified</div>
+                <div style="font-weight:700;font-size:0.85rem;color:#10b981">🔒 Instant Booking</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search Section -->
+    <div class="search-section">
+      <div class="container">
+        <div class="search-box">
+          <div class="search-tabs">
+            <div class="search-tab-group">
+              <button class="search-tab active" data-tab="accommodation" onclick="switchHomeSearchTab('accommodation')">🏨
+                Accommodation</button>
+              <button class="search-tab" data-tab="bikes" onclick="switchHomeSearchTab('bikes')">🚲 Bikes</button>
+              <button class="search-tab" data-tab="equipment" onclick="switchHomeSearchTab('equipment')">🏄
+                Equipment</button>
+              <button class="search-tab" data-tab="guides" onclick="switchHomeSearchTab('guides')">🧭 Guides</button>
+            </div>
+            <button type="button" class="search-currency-btn" onclick="toggleCurrency()" title="Switch Currency">
+              💱 <span id="search-curr-label">USD ($)</span> ⇄ LKR
+            </button>
+          </div>
+
+          <!-- Accommodation Search -->
+          <div id="sf-accommodation" class="search-form-wrap" style="display:block">
+            <form id="search-accommodation" class="search-form" onsubmit="handleAccommodationSearch(event)">
+              <div class="search-field">
+                <label>Type</label>
+                <select name="type">
+                  <option value="">Any Type</option>
+                  <option value="Villa">Villa</option>
+                  <option value="Apartment">Apartment</option>
+                  <option value="Room">Room</option>
+                </select>
+              </div>
+              <div class="search-field">
+                <label>Location</label>
+                <input type="text" name="location" placeholder="City or region…">
+              </div>
+              <div class="search-field">
+                <label>Check-in</label>
+                <input type="date" name="check_in">
+              </div>
+              <div class="search-field">
+                <label>Check-out</label>
+                <input type="date" name="check_out">
+              </div>
+              <div class="search-field">
+                <label>Min Price</label>
+                <input type="number" name="min_price" placeholder="$0" min="0">
+              </div>
+              <div class="search-field">
+                <label>Max Price</label>
+                <input type="number" name="max_price" placeholder="$9999" min="0">
+              </div>
+              <div class="search-field">
+                <label>Units</label>
+                <input type="number" name="units" placeholder="1" min="1">
+              </div>
+              <div class="search-field" style="flex:0;min-width:auto">
+                <label>&nbsp;</label>
+                <button type="submit" class="btn btn-primary">Search</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Bikes Search -->
+          <div id="sf-bikes" class="search-form-wrap" style="display:none">
+            <form id="search-bikes" class="search-form" onsubmit="handleBikesSearch(event)">
+              <div class="search-field">
+                <label>Bike Model</label>
+                <select name="model">
+                  <option value="">Any Model</option>
+                  <option value="Mountain Bike">Mountain Bike</option>
+                  <option value="Road Bike">Road Bike</option>
+                  <option value="City Bike">City Bike</option>
+                  <option value="Electric Bike">Electric Bike</option>
+                </select>
+              </div>
+              <div class="search-field">
+                <label>Location</label>
+                <input type="text" name="location" placeholder="City or region…">
+              </div>
+              <div class="search-field">
+                <label>Start Date</label>
+                <input type="date" name="start_date">
+              </div>
+              <div class="search-field">
+                <label>End Date</label>
+                <input type="date" name="end_date">
+              </div>
+              <div class="search-field">
+                <label>Min Price</label>
+                <input type="number" name="min_price" placeholder="$0" min="0">
+              </div>
+              <div class="search-field">
+                <label>Max Price</label>
+                <input type="number" name="max_price" placeholder="$9999" min="0">
+              </div>
+              <div class="search-field" style="flex:0;min-width:auto">
+                <label>&nbsp;</label>
+                <button type="submit" class="btn btn-primary">Search</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Equipment Search -->
+          <div id="sf-equipment" class="search-form-wrap" style="display:none">
+            <form id="search-equipment" class="search-form" onsubmit="handleEquipmentSearch(event)">
+              <div class="search-field">
+                <label>Category</label>
+                <select name="type">
+                  <option value="">Any Type</option>
+                  <option value="Surfboard">Surfboard</option>
+                  <option value="Skateboard">Skateboard</option>
+                  <option value="Boat">Boat</option>
+                  <option value="Kayak">Kayak</option>
+                  <option value="Snorkeling Gear">Snorkeling Gear</option>
+                  <option value="Camping Gear">Camping Gear</option>
+                </select>
+              </div>
+              <div class="search-field">
+                <label>Location</label>
+                <input type="text" name="location" placeholder="City or region…">
+              </div>
+              <div class="search-field">
+                <label>Start Date</label>
+                <input type="date" name="start_date">
+              </div>
+              <div class="search-field">
+                <label>End Date</label>
+                <input type="date" name="end_date">
+              </div>
+              <div class="search-field">
+                <label>Min Price</label>
+                <input type="number" name="min_price" placeholder="$0" min="0">
+              </div>
+              <div class="search-field">
+                <label>Max Price</label>
+                <input type="number" name="max_price" placeholder="$9999" min="0">
+              </div>
+              <div class="search-field" style="flex:0;min-width:auto">
+                <label>&nbsp;</label>
+                <button type="submit" class="btn btn-primary">Search</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Guides Search -->
+          <div id="sf-guides" class="search-form-wrap" style="display:none">
+            <form id="search-guides" class="search-form" onsubmit="handleGuidesSearch(event)">
+              <div class="search-field">
+                <label>Location</label>
+                <input type="text" name="location" placeholder="City or region…">
+              </div>
+              <div class="search-field">
+                <label>Start Date</label>
+                <input type="date" name="start_date">
+              </div>
+              <div class="search-field">
+                <label>End Date</label>
+                <input type="date" name="end_date">
+              </div>
+              <div class="search-field">
+                <label>Min Rating</label>
+                <select name="min_rating">
+                  <option value="">Any Rating</option>
+                  <option value="4">4+ Stars</option>
+                  <option value="4.5">4.5+ Stars</option>
+                  <option value="5">5 Stars</option>
+                </select>
+              </div>
+              <div class="search-field" style="flex:0;min-width:auto">
+                <label>&nbsp;</label>
+                <button type="submit" class="btn btn-primary">Search</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features -->
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">✨ Why TourGuide</div>
+          <h2 class="section-title">Everything You Need<br><span>For Your Journey</span></h2>
+          <p class="section-subtitle">From cozy rooms to adventure bikes — discover, compare, and book in seconds.</p>
+        </div>
+        <div class="grid-4">
+          <div class="feature-card">
+            <div class="feature-icon" style="background:rgba(56,189,248,0.1)">🏠</div>
+            <div class="feature-title">Premium Stays</div>
+            <p class="feature-desc">Villas, apartments, and rooms handpicked for your comfort and budget.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon" style="background:rgba(251,146,60,0.1)">🚲</div>
+            <div class="feature-title">Bike Rentals</div>
+            <p class="feature-desc">Mountain, road, city, and electric bikes available by the hour or day.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon" style="background:rgba(129,140,248,0.1)">🏄</div>
+            <div class="feature-title">Equipment Hire</div>
+            <p class="feature-desc">Surfboards, kayaks, boats and more for every type of adventure.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon" style="background:rgba(16,185,129,0.1)">🧭</div>
+            <div class="feature-title">Expert Guides</div>
+            <p class="feature-desc">Local, experienced tour guides rated by real travellers just like you.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Accommodations -->
+    <section class="section" style="padding-top:0">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag tag-accommodation">🏠 Featured</div>
+          <h2 class="section-title">Top <span>Accommodations</span></h2>
+          <p class="section-subtitle">Handpicked stays for every budget and preference.</p>
+        </div>
+        <div class="grid-4" id="home-accommodations">
+          <div class="loading">
+            <div class="spinner"></div>
+          </div>
+        </div>
+        <div class="text-center mt-3">
+          <button class="btn btn-outline" onclick="navigateTo('accommodation')">View All Accommodations →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Bikes -->
+    <section class="section"
+      style="background:var(--bg-secondary);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag tag-bikes">🚲 Rentals</div>
+          <h2 class="section-title">Explore by <span>Bike</span></h2>
+          <p class="section-subtitle">From mountain trails to city streets — find the perfect ride.</p>
+        </div>
+        <div class="grid-4" id="home-bikes">
+          <div class="loading">
+            <div class="spinner"></div>
+          </div>
+        </div>
+        <div class="text-center mt-3">
+          <button class="btn btn-outline" onclick="navigateTo('bikes')">View All Bikes →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Equipment -->
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag tag-equipment">🏄 Equipment</div>
+          <h2 class="section-title">Adventure <span>Equipment</span></h2>
+          <p class="section-subtitle">Rent surfboards, boats, kayaks and more for your next thrill.</p>
+        </div>
+        <div class="grid-4" id="home-equipment">
+          <div class="loading">
+            <div class="spinner"></div>
+          </div>
+        </div>
+        <div class="text-center mt-3">
+          <button class="btn btn-outline" onclick="navigateTo('equipment')">View All Equipment →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Guides -->
+    <section class="section" style="background:var(--bg-secondary);border-top:1px solid var(--border)">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag tag-guides">🧭 Guides</div>
+          <h2 class="section-title">Meet Our <span>Expert Guides</span></h2>
+          <p class="section-subtitle">Experienced local guides ready to show you the best of every destination.</p>
+        </div>
+        <div class="grid-4" id="home-guides">
+          <div class="loading">
+            <div class="spinner"></div>
+          </div>
+        </div>
+        <div class="text-center mt-3">
+          <button class="btn btn-outline" onclick="navigateTo('guides')">View All Guides →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <div class="nav-logo"
+              style="-webkit-text-fill-color:transparent;background:var(--gradient-main);-webkit-background-clip:text;font-family:'Outfit',sans-serif;font-weight:800;font-size:1.3rem;display:inline-flex;align-items:center;gap:10px">
+              <div
+                style="width:36px;height:36px;background:var(--gradient-main);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                🧭</div>
+              TourGuide
+            </div>
+            <p class="footer-brand-desc">Your all-in-one platform for discovering and booking premium travel experiences
+              worldwide.</p>
+          </div>
+          <div>
+            <div class="footer-col-title">Explore</div>
+            <ul class="footer-links">
+              <li><a href="#" onclick="navigateTo('accommodation')">Accommodation</a></li>
+              <li><a href="#" onclick="navigateTo('bikes')">Bike Rentals</a></li>
+              <li><a href="#" onclick="navigateTo('equipment')">Equipment</a></li>
+              <li><a href="#" onclick="navigateTo('guides')">Tour Guides</a></li>
+            </ul>
+          </div>
+          <div>
+            <div class="footer-col-title">Account</div>
+            <ul class="footer-links">
+              <li><a href="#" onclick="openAuthModal();switchAuthTab('login')">Sign In</a></li>
+              <li><a href="#" onclick="openAuthModal();switchAuthTab('register')">Register</a></li>
+              <li><a href="#" onclick="navigateTo('profile')">My Profile</a></li>
+              <li><a href="#" onclick="switchProfilePanel('bookings');navigateTo('profile')">My Bookings</a></li>
+            </ul>
+          </div>
+          <div>
+            <div class="footer-col-title">Support</div>
+            <ul class="footer-links">
+              <li><a href="setup.php" target="_blank">Setup</a></li>
+              <li><a href="#">Help Center</a></li>
+              <li><a href="#">Privacy Policy</a></li>
+              <li><a href="#">Terms of Service</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>© 2026 TourGuide. All rights reserved.</p>
+          <p>Built for adventures 🌍</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- ACCOMMODATION PAGE                                                       -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-accommodation">
+    <div class="listings-page">
+      <div class="listings-header" style="padding-top:104px">
+        <div class="container">
+          <div class="section-tag tag-accommodation">🏠 Accommodation</div>
+          <h1 class="section-title" style="margin-top:12px">Find Your Perfect <span>Stay</span></h1>
+          <!-- Filters -->
+          <form id="acc-filter-form" class="search-form" style="margin-top:24px"
+            onsubmit="handleAccommodationSearch(event)">
+            <div class="search-field">
+              <label>Type</label>
+              <select name="type">
+                <option value="">Any Type</option>
+                <option value="Villa">Villa</option>
+                <option value="Apartment">Apartment</option>
+                <option value="Room">Room</option>
+              </select>
+            </div>
+            <div class="search-field">
+              <label>Location</label>
+              <input type="text" name="location" placeholder="City or region…">
+            </div>
+            <div class="search-field">
+              <label>Check-in</label>
+              <input type="date" name="check_in">
+            </div>
+            <div class="search-field">
+              <label>Check-out</label>
+              <input type="date" name="check_out">
+            </div>
+            <div class="search-field">
+              <label>Min $</label>
+              <input type="number" name="min_price" placeholder="0" min="0">
+            </div>
+            <div class="search-field">
+              <label>Max $</label>
+              <input type="number" name="max_price" placeholder="9999" min="0">
+            </div>
+            <div class="search-field">
+              <label>Units</label>
+              <input type="number" name="units" placeholder="1" min="1">
+            </div>
+            <div class="search-field" style="flex:0;min-width:auto">
+              <label>&nbsp;</label>
+              <button type="submit" class="btn btn-primary">Filter</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="listings-body">
+        <div class="container">
+          <div class="results-info">
+            <div class="results-count" id="listings-count-accommodation">Loading…</div>
+          </div>
+          <div id="listings-accommodation">
+            <div class="loading">
+              <div class="spinner"></div>
+              <p>Loading accommodations…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- BIKES PAGE                                                               -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-bikes">
+    <div class="listings-page">
+      <div class="listings-header" style="padding-top:104px">
+        <div class="container">
+          <div class="section-tag tag-bikes">🚲 Bike Rentals</div>
+          <h1 class="section-title" style="margin-top:12px">Rent the Perfect <span>Bike</span></h1>
+          <form id="bike-filter-form" class="search-form" style="margin-top:24px" onsubmit="handleBikesSearch(event)">
+            <div class="search-field">
+              <label>Bike Model</label>
+              <select name="model">
+                <option value="">Any Model</option>
+                <option value="Mountain Bike">Mountain Bike</option>
+                <option value="Road Bike">Road Bike</option>
+                <option value="City Bike">City Bike</option>
+                <option value="Electric Bike">Electric Bike</option>
+              </select>
+            </div>
+            <div class="search-field">
+              <label>Location</label>
+              <input type="text" name="location" placeholder="City or region…">
+            </div>
+            <div class="search-field">
+              <label>Start Date</label>
+              <input type="date" name="start_date">
+            </div>
+            <div class="search-field">
+              <label>End Date</label>
+              <input type="date" name="end_date">
+            </div>
+            <div class="search-field">
+              <label>Min $</label>
+              <input type="number" name="min_price" placeholder="0" min="0">
+            </div>
+            <div class="search-field">
+              <label>Max $</label>
+              <input type="number" name="max_price" placeholder="9999" min="0">
+            </div>
+            <div class="search-field" style="flex:0;min-width:auto">
+              <label>&nbsp;</label>
+              <button type="submit" class="btn btn-primary">Filter</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="listings-body">
+        <div class="container">
+          <div class="results-info">
+            <div class="results-count" id="listings-count-bikes">Loading…</div>
+          </div>
+          <div id="listings-bikes">
+            <div class="loading">
+              <div class="spinner"></div>
+              <p>Loading bikes…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- EQUIPMENT PAGE                                                           -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-equipment">
+    <div class="listings-page">
+      <div class="listings-header" style="padding-top:104px">
+        <div class="container">
+          <div class="section-tag tag-equipment">🏄 Equipment Rentals</div>
+          <h1 class="section-title" style="margin-top:12px">Adventure <span>Equipment</span></h1>
+          <form id="equip-filter-form" class="search-form" style="margin-top:24px"
+            onsubmit="handleEquipmentSearch(event)">
+            <div class="search-field">
+              <label>Category</label>
+              <select name="type">
+                <option value="">Any Type</option>
+                <option value="Surfboard">Surfboard</option>
+                <option value="Skateboard">Skateboard</option>
+                <option value="Boat">Boat</option>
+                <option value="Kayak">Kayak</option>
+                <option value="Snorkeling Gear">Snorkeling Gear</option>
+                <option value="Camping Gear">Camping Gear</option>
+              </select>
+            </div>
+            <div class="search-field">
+              <label>Location</label>
+              <input type="text" name="location" placeholder="City or region…">
+            </div>
+            <div class="search-field">
+              <label>Start Date</label>
+              <input type="date" name="start_date">
+            </div>
+            <div class="search-field">
+              <label>End Date</label>
+              <input type="date" name="end_date">
+            </div>
+            <div class="search-field">
+              <label>Min $</label>
+              <input type="number" name="min_price" placeholder="0" min="0">
+            </div>
+            <div class="search-field">
+              <label>Max $</label>
+              <input type="number" name="max_price" placeholder="9999" min="0">
+            </div>
+            <div class="search-field" style="flex:0;min-width:auto">
+              <label>&nbsp;</label>
+              <button type="submit" class="btn btn-primary">Filter</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="listings-body">
+        <div class="container">
+          <div class="results-info">
+            <div class="results-count" id="listings-count-equipment">Loading…</div>
+          </div>
+          <div id="listings-equipment">
+            <div class="loading">
+              <div class="spinner"></div>
+              <p>Loading equipment…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- GUIDES PAGE                                                              -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-guides">
+    <div class="listings-page">
+      <div class="listings-header" style="padding-top:104px">
+        <div class="container">
+          <div class="section-tag tag-guides">🧭 Tour Guides</div>
+          <h1 class="section-title" style="margin-top:12px">Meet Our <span>Expert Guides</span></h1>
+          <form id="guides-filter-form" class="search-form" style="margin-top:24px"
+            onsubmit="handleGuidesSearch(event)">
+            <div class="search-field">
+              <label>Location</label>
+              <input type="text" name="location" placeholder="City or region…">
+            </div>
+            <div class="search-field">
+              <label>Start Date</label>
+              <input type="date" name="start_date">
+            </div>
+            <div class="search-field">
+              <label>End Date</label>
+              <input type="date" name="end_date">
+            </div>
+            <div class="search-field">
+              <label>Min Rating</label>
+              <select name="min_rating">
+                <option value="">Any Rating</option>
+                <option value="4">4+ Stars</option>
+                <option value="4.5">4.5+ Stars</option>
+                <option value="5">5 Stars</option>
+              </select>
+            </div>
+            <div class="search-field" style="flex:0;min-width:auto">
+              <label>&nbsp;</label>
+              <button type="submit" class="btn btn-primary">Filter</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="listings-body">
+        <div class="container">
+          <div class="results-info">
+            <div class="results-count" id="listings-count-guides">Loading…</div>
+          </div>
+          <div id="listings-guides">
+            <div class="loading">
+              <div class="spinner"></div>
+              <p>Loading guides…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- PROFILE PAGE                                                             -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-profile">
+    <div style="padding-top:72px;min-height:100vh">
+      <div id="profile-content">
+        <div style="text-align:center;padding:80px 24px">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- AUTH MODAL                                                               -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="auth-modal" onclick="if(event.target===this)closeAuthModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Welcome to TourGuide 🧭</div>
+        <button class="modal-close" onclick="closeAuthModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tabs">
+          <button class="modal-tab active" data-tab="login" onclick="switchAuthTab('login')">Sign In</button>
+          <button class="modal-tab" data-tab="register" onclick="switchAuthTab('register')">Register</button>
+        </div>
+
+        <!-- Login Tab -->
+        <div class="modal-tab-content active" id="tab-login">
+          <div id="login-alerts"></div>
+          <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="form-group">
+              <label>Username</label>
+              <input type="text" id="login-username" class="form-control" placeholder="Enter your username" required
+                autocomplete="username">
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <input type="password" id="login-password" class="form-control" placeholder="Enter your password" required
+                autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+          </form>
+          <p style="text-align:center;margin-top:16px;font-size:0.85rem;color:var(--text-muted)">
+            Don't have an account?
+            <button onclick="switchAuthTab('register')"
+              style="background:none;border:none;color:var(--accent-cyan);cursor:pointer;font-size:0.85rem;font-weight:600">Register
+              here</button>
+          </p>
+        </div>
+
+        <!-- Register Tab -->
+        <div class="modal-tab-content" id="tab-register">
+          <div id="register-alerts"></div>
+          <form id="register-form" onsubmit="handleRegister(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Full Name *</label>
+                <input type="text" id="reg-name" class="form-control" placeholder="Your full name" required>
+              </div>
+              <div class="form-group">
+                <label>Username *</label>
+                <input type="text" id="reg-username" class="form-control" placeholder="username" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Email Address *</label>
+                <input type="email" id="reg-email" class="form-control" placeholder="your@email.com" required>
+              </div>
+              <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" id="reg-phone" class="form-control" placeholder="+94 77 123 4567">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Password *</label>
+                <input type="password" id="reg-password" class="form-control" placeholder="min. 6 characters" required>
+              </div>
+              <div class="form-group">
+                <label>Confirm Password *</label>
+                <input type="password" id="reg-confirm" class="form-control" placeholder="Repeat password" required>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Create Guest Account</button>
+          </form>
+          <p style="text-align:center;margin-top:16px;font-size:0.85rem;color:var(--text-muted)">
+            Already have an account?
+            <button onclick="switchAuthTab('login')"
+              style="background:none;border:none;color:var(--accent-cyan);cursor:pointer;font-size:0.85rem;font-weight:600">Sign
+              in here</button>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- DETAIL MODAL                                                             -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="detail-modal" onclick="if(event.target===this)closeDetailModal()">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <div class="modal-title">Details &amp; Booking</div>
+        <button class="modal-close" onclick="closeDetailModal()">✕</button>
+      </div>
+      <div class="modal-body" id="detail-modal-body">
+        <div class="loading">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- PAYMENT MODAL (PayHere Gateway)                                          -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="payment-modal" onclick="if(event.target===this)closePaymentModal()">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <div class="modal-title" style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:1.4rem">💳</span>
+          <span>PayHere Payment Gateway</span>
+        </div>
+        <button class="modal-close" onclick="closePaymentModal()">✕</button>
+      </div>
+      <div class="modal-body" id="payment-modal-body">
+        <div class="loading"><div class="spinner"></div><p>Preparing PayHere Checkout…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- RECEIPT MODAL (Download / Print)                                         -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="receipt-modal" onclick="if(event.target===this)closeReceiptModal()">
+    <div class="modal modal-lg receipt-modal-dialog">
+      <div class="modal-header no-print">
+        <div class="modal-title" style="display:flex;align-items:center;gap:8px">
+          <span>🧾</span>
+          <span>Official Payment Receipt</span>
+        </div>
+        <div class="receipt-actions-header" style="display:flex;align-items:center;gap:8px">
+          <button class="btn btn-outline-cyan btn-sm" onclick="printReceipt()" title="Print receipt or save as PDF">
+            🖨️ Print / Save as PDF
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="downloadReceiptFile()" title="Download receipt file">
+            ⬇️ Download Receipt
+          </button>
+          <button class="modal-close" onclick="closeReceiptModal()" style="margin-left:8px">✕</button>
+        </div>
+      </div>
+      <div class="modal-body" id="receipt-modal-body">
+        <div class="loading"><div class="spinner"></div><p>Generating receipt…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- REVIEW MODAL (Guest Review & Rating)                                     -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="review-modal" onclick="if(event.target===this)closeReviewModal()">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <div class="modal-title" style="display:flex;align-items:center;gap:8px">
+          <span>⭐</span>
+          <span id="review-modal-title">Write a Review</span>
+        </div>
+        <button class="modal-close" onclick="closeReviewModal()">✕</button>
+      </div>
+      <div class="modal-body" id="review-modal-body">
+        <div id="review-alerts"></div>
+        <form id="review-form" onsubmit="handleReviewSubmit(event)">
+          <input type="hidden" id="review-booking-id" name="booking_id">
+          <input type="hidden" id="review-item-type" name="item_type">
+          <input type="hidden" id="review-item-id" name="item_id">
+          
+          <div class="form-group">
+            <label>Booked Item</label>
+            <input type="text" id="review-item-name" class="form-control" readonly style="opacity:0.85;background:rgba(255,255,255,0.03)">
+          </div>
+
+          <div class="form-group">
+            <label>Rating (1 - 5 Stars)</label>
+            <div class="star-picker-container">
+              <div class="star-rating-picker" id="star-picker">
+                <span class="star-pick" data-val="1" onclick="setPickerRating(1)">★</span>
+                <span class="star-pick" data-val="2" onclick="setPickerRating(2)">★</span>
+                <span class="star-pick" data-val="3" onclick="setPickerRating(3)">★</span>
+                <span class="star-pick" data-val="4" onclick="setPickerRating(4)">★</span>
+                <span class="star-pick active" data-val="5" onclick="setPickerRating(5)">★</span>
+              </div>
+              <span id="star-picker-label" class="star-picker-score">5.0 / 5.0 (Excellent)</span>
+            </div>
+            <input type="hidden" id="review-rating-val" name="rating" value="5">
+          </div>
+
+          <div class="form-group">
+            <label>Your Review & Experience *</label>
+            <textarea id="review-text" name="review" class="form-control" rows="4" placeholder="Tell us how was your stay, ride, gear, or tour guide..." required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full" id="review-submit-btn">
+            ⭐ Post Review
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- EDIT PROFILE MODAL (Admin Profile & Contact Details)                      -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="edit-profile-modal" onclick="if(event.target===this)closeEditProfileModal()">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <div class="modal-title" style="display:flex;align-items:center;gap:8px">
+          <span>✏️</span>
+          <span>Edit Profile & Contact Details</span>
+        </div>
+        <button class="modal-close" onclick="closeEditProfileModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="edit-profile-alerts"></div>
+        <form id="edit-profile-form" onsubmit="handleEditProfileSubmit(event)">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="edit-profile-name" name="full_name" class="form-control" required placeholder="Full Name">
+          </div>
+          <div class="form-group">
+            <label>Email Address *</label>
+            <input type="email" id="edit-profile-email" name="email" class="form-control" required placeholder="admin@example.com">
+          </div>
+          <div class="form-group">
+            <label>Phone Number (visible to guests who book your items)</label>
+            <input type="tel" id="edit-profile-phone" name="phone" class="form-control" placeholder="+94 77 123 4567">
+          </div>
+          <div class="form-group" id="edit-profile-bank-group">
+            <label>Settlement Bank Details (for Admin payouts)</label>
+            <input type="text" id="edit-profile-bank" name="bank_details" class="form-control" placeholder="e.g. Commercial Bank - 8001234567 - Colombo">
+          </div>
+          <div class="form-group">
+            <label>New Password (leave blank to keep current password)</label>
+            <input type="password" id="edit-profile-password" name="password" class="form-control" placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn btn-primary btn-full" id="edit-profile-btn">
+            Save Profile Changes
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- EDIT ITEM MODAL (Admin Edit Item Details & Photos)                        -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="edit-item-modal" onclick="if(event.target===this)closeEditItemModal()">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <div class="modal-title" style="display:flex;align-items:center;gap:8px">
+          <span>✏️</span>
+          <span id="edit-item-modal-title">Edit Item Details & Photos</span>
+        </div>
+        <button class="modal-close" onclick="closeEditItemModal()">✕</button>
+      </div>
+      <div class="modal-body" id="edit-item-modal-body">
+        <div class="loading"><div class="spinner"></div><p>Loading item details…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- PayHere JavaScript SDK -->
+  <script type="text/javascript" src="https://www.payhere.lk/lib/payhere.js"></script>
+  <script src="app.js?v=20261017-4"></script>
+
+  <style>
+    /* Search form wrap toggle */
+    .search-form-wrap {
+      display: none;
+    }
+
+    .search-form-wrap.active-form {
+      display: block;
+    }
+
+    /* Override nav-logo for footer (no text fill issue) */
+    .footer .nav-logo {
+      background-clip: text;
+    }
+  </style>
+
+</body>
+
+</html>
