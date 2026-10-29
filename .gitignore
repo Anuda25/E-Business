@@ -1,0 +1,6 @@
+/config.local.php
+/.env
+/.env.*
+!/.env.example
+/image/uploads/*
+!/image/uploads/.gitkeep

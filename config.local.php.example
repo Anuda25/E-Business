@@ -1,0 +1,10 @@
+<?php
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_NAME', 'tourguide_db');
+
+define('PAYHERE_MERCHANT_ID', 'YOUR_SANDBOX_MERCHANT_ID');
+define('PAYHERE_MERCHANT_SECRET', 'YOUR_SANDBOX_MERCHANT_SECRET');
+define('PAYHERE_ENV', 'sandbox');
+define('PAYHERE_CURRENCY', 'USD');
