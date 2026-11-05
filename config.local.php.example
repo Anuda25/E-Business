@@ -8,3 +8,4 @@ define('PAYHERE_MERCHANT_ID', 'YOUR_SANDBOX_MERCHANT_ID');
 define('PAYHERE_MERCHANT_SECRET', 'YOUR_SANDBOX_MERCHANT_SECRET');
 define('PAYHERE_ENV', 'sandbox');
 define('PAYHERE_CURRENCY', 'USD');
+define('PAYHERE_NOTIFY_URL', 'https://YOUR_PUBLIC_DOMAIN/New/api.php?action=payhere_notify');

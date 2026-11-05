@@ -48,6 +48,34 @@ function respond($data, $code = 200) {
     exit;
 }
 
+function getPayHereNotifyUrl() {
+    $url = trim(PAYHERE_NOTIFY_URL);
+    $parts = $url !== '' ? parse_url($url) : false;
+    $scheme = is_array($parts) ? strtolower($parts['scheme'] ?? '') : '';
+    $host = is_array($parts) ? strtolower($parts['host'] ?? '') : '';
+    $query = [];
+    if (is_array($parts) && !empty($parts['query'])) parse_str($parts['query'], $query);
+    $isLocalHost = $host === 'localhost' || $host === '::1' || $host === '[::1]' || substr($host, -6) === '.local';
+    $isPrivateIp = filter_var($host, FILTER_VALIDATE_IP) !== false
+        && filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
+
+    if (PAYHERE_MERCHANT_ID === '' || PAYHERE_MERCHANT_SECRET === '' || !in_array(PAYHERE_ENV, ['sandbox', 'live'], true)) {
+        respond([
+            'success' => false,
+            'message' => 'PayHere is not fully configured. Set the correct merchant ID, merchant secret, and PAYHERE_ENV (sandbox or live) in config.local.php.',
+        ], 503);
+    }
+
+    if (!filter_var($url, FILTER_VALIDATE_URL) || $scheme !== 'https' || !$host || $isLocalHost || $isPrivateIp || ($query['action'] ?? '') !== 'payhere_notify') {
+        respond([
+            'success' => false,
+            'message' => 'PayHere requires a publicly reachable HTTPS notification endpoint. Set PAYHERE_NOTIFY_URL to https://YOUR_PUBLIC_DOMAIN/New/api.php?action=payhere_notify in config.local.php; localhost cannot receive payment notifications.',
+        ], 503);
+    }
+
+    return $url;
+}
+
 function requireLogin() {
     if (empty($_SESSION['username'])) {
         respond(['success' => false, 'message' => 'You must be logged in.'], 401);
@@ -363,15 +391,12 @@ switch ($action) {
             if (empty($e_date)) $e_date = $s_date;
             $where[] = '(a.available_from IS NULL OR a.available_from <= ?)';
             $where[] = '(a.available_to IS NULL OR a.available_to >= ?)';
-            $where[] = "a.id NOT IN (SELECT item_id FROM bookings WHERE item_type='accommodation' AND status!='cancelled' AND payment_status='paid' AND start_date IS NOT NULL AND start_date <= ? AND COALESCE(end_date, start_date) >= ?)";
             $where[] = "a.id NOT IN (SELECT item_id FROM item_date_blocks WHERE item_type='accommodation' AND start_date <= ? AND end_date >= ?)";
             $params[] = $s_date;
             $params[] = $e_date;
             $params[] = $e_date;
             $params[] = $s_date;
-            $params[] = $e_date;
-            $params[] = $s_date;
-            $types .= 'ssssss';
+            $types .= 'ssss';
         }
 
         $sql = "SELECT a.id, COALESCE(NULLIF(a.name,''), a.title) as name, a.type, a.description, a.location, a.price, a.units, a.image, a.images, a.rating, a.reviews, a.available_from, a.available_to, a.created_by, COALESCE(u.full_name, u.name, a.created_by) as admin_name
@@ -387,6 +412,13 @@ switch ($action) {
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
+        if (!empty($s_date) && $rows) {
+            $maxBookedUnits = getMaxBookedUnitsByItemForRange($db, 'accommodation', array_column($rows, 'id'), $s_date, $e_date);
+            $requestedUnits = max(1, (int)($_GET['units'] ?? 1));
+            $rows = array_values(array_filter($rows, function ($item) use ($maxBookedUnits, $requestedUnits) {
+                return ($maxBookedUnits[(string)$item['id']] ?? 0) + $requestedUnits <= (int)$item['units'];
+            }));
+        }
         applyReviewStats($db, 'accommodation', $rows);
 
         // Stamp is_wishlisted for guest
@@ -534,28 +566,39 @@ switch ($action) {
         if (!empty($s_date)) {
             $where[] = '(b.available_from IS NULL OR b.available_from <= ?)';
             $where[] = '(b.available_to IS NULL OR b.available_to >= ?)';
-            $where[] = "b.id NOT IN (SELECT item_id FROM bookings WHERE item_type='bike' AND status!='cancelled' AND payment_status='paid' AND start_date IS NOT NULL AND start_date <= ? AND COALESCE(end_date, start_date) >= ?)";
             $where[] = "b.id NOT IN (SELECT item_id FROM item_date_blocks WHERE item_type='bike' AND start_date <= ? AND end_date >= ?)";
             $params[] = $s_date;
             $params[] = $e_date;
             $params[] = $e_date;
             $params[] = $s_date;
-            $params[] = $e_date;
-            $params[] = $s_date;
-            $types .= 'ssssss';
+            $types .= 'ssss';
         }
 
-        $sql = "SELECT b.id, COALESCE(NULLIF(b.name,''), b.title) as name, COALESCE(NULLIF(b.model,''), b.type) as model, b.description, b.location, b.price, b.time_period, b.image, b.images, b.rating, b.reviews, b.available_from, b.available_to, b.created_by, COALESCE(u.full_name, u.name, b.created_by) as admin_name
+        $sql = "SELECT b.id, COALESCE(NULLIF(b.name,''), b.title) as name, COALESCE(NULLIF(b.model,''), b.type) as model, b.description, b.location, b.price, b.units, b.time_period, b.image, b.images, b.rating, b.reviews, b.available_from, b.available_to, b.created_by, COALESCE(u.full_name, u.name, b.created_by) as admin_name
                 FROM bikes b
                 LEFT JOIN users u ON b.created_by = u.username
                 WHERE " . implode(' AND ', $where) . "
                 ORDER BY b.created_at DESC";
 
         $stmt = $db->prepare($sql);
+        if (!$stmt) {
+            error_log('Unable to prepare bike listing query: ' . $db->error);
+            respond(['success' => false, 'message' => 'Unable to load bike listings. Please run setup.php and try again.'], 500);
+        }
         if ($types && $params) $stmt->bind_param($types, ...$params);
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            error_log('Unable to load bike listings: ' . $stmt->error);
+            $stmt->close();
+            respond(['success' => false, 'message' => 'Unable to load bike listings. Please try again.'], 500);
+        }
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
+        if (!empty($s_date) && $rows) {
+            $maxBookedUnits = getMaxBookedUnitsByItemForRange($db, 'bike', array_column($rows, 'id'), $s_date, $e_date);
+            $rows = array_values(array_filter($rows, function ($item) use ($maxBookedUnits) {
+                return ($maxBookedUnits[(string)$item['id']] ?? 0) < (int)$item['units'];
+            }));
+        }
         applyReviewStats($db, 'bike', $rows);
 
         // Stamp is_wishlisted for guest
@@ -576,12 +619,13 @@ switch ($action) {
         $desc    = sanitize($_POST['description'] ?? '');
         $loc     = sanitize($_POST['location'] ?? '');
         $price   = (float)($_POST['price'] ?? 0);
+        $units   = (int)($_POST['units'] ?? 1);
         $period  = sanitize($_POST['time_period'] ?? '1 day');
         $avail_from = !empty($_POST['available_from']) ? $_POST['available_from'] : null;
         $avail_to   = !empty($_POST['available_to']) ? $_POST['available_to'] : null;
 
-        if (!$name || !$loc || $price <= 0) {
-            respond(['success' => false, 'message' => 'Name, location and price are required.'], 400);
+        if (!$name || !$loc || $price <= 0 || $units < 1) {
+            respond(['success' => false, 'message' => 'Name, location, a positive price and at least one available unit are required.'], 400);
         }
 
         $imgsArr = handleMultiImageUpload('images', 'bikes');
@@ -597,8 +641,8 @@ switch ($action) {
         $id = 'bike-' . uniqid();
 
         $db = getDB();
-        $stmt = $db->prepare("INSERT INTO bikes (id, name, title, model, type, description, location, price, time_period, image, images, available_from, available_to, created_by, rating, reviews) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0)");
-        $stmt->bind_param("sssssssdssssss", $id, $name, $name, $model, $model, $desc, $loc, $price, $period, $image, $imagesJson, $avail_from, $avail_to, $created_by);
+        $stmt = $db->prepare("INSERT INTO bikes (id, name, title, model, type, description, location, price, units, time_period, image, images, available_from, available_to, created_by, rating, reviews) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0)");
+        $stmt->bind_param("sssssssdissssss", $id, $name, $name, $model, $model, $desc, $loc, $price, $units, $period, $image, $imagesJson, $avail_from, $avail_to, $created_by);
         if ($stmt->execute()) {
             $stmt->close();
             respond(['success' => true, 'message' => "Bike added successfully by @{$created_by}.", 'id' => $id]);
@@ -642,7 +686,7 @@ switch ($action) {
         $id = sanitize($_GET['id'] ?? '');
         if (!$id) respond(['success' => false, 'message' => 'ID required.'], 400);
         $db = getDB();
-        $stmt = $db->prepare("SELECT b.id, COALESCE(NULLIF(b.name,''), b.title) as name, COALESCE(NULLIF(b.model,''), b.type) as model, b.description, b.location, b.price, b.time_period, b.image, b.images, b.rating, b.reviews, b.available_from, b.available_to, b.created_by, COALESCE(u.full_name, u.name, b.created_by) as admin_name
+        $stmt = $db->prepare("SELECT b.id, COALESCE(NULLIF(b.name,''), b.title) as name, COALESCE(NULLIF(b.model,''), b.type) as model, b.description, b.location, b.price, b.units, b.time_period, b.image, b.images, b.rating, b.reviews, b.available_from, b.available_to, b.created_by, COALESCE(u.full_name, u.name, b.created_by) as admin_name
                              FROM bikes b
                              LEFT JOIN users u ON b.created_by = u.username
                              WHERE b.id=?");
@@ -702,18 +746,15 @@ switch ($action) {
         if (!empty($s_date)) {
             $where[] = '(e.available_from IS NULL OR e.available_from <= ?)';
             $where[] = '(e.available_to IS NULL OR e.available_to >= ?)';
-            $where[] = "e.id NOT IN (SELECT item_id FROM bookings WHERE item_type='equipment' AND status!='cancelled' AND payment_status='paid' AND start_date IS NOT NULL AND start_date <= ? AND COALESCE(end_date, start_date) >= ?)";
             $where[] = "e.id NOT IN (SELECT item_id FROM item_date_blocks WHERE item_type='equipment' AND start_date <= ? AND end_date >= ?)";
             $params[] = $s_date;
             $params[] = $e_date;
             $params[] = $e_date;
             $params[] = $s_date;
-            $params[] = $e_date;
-            $params[] = $s_date;
-            $types .= 'ssssss';
+            $types .= 'ssss';
         }
 
-        $sql = "SELECT e.id, COALESCE(NULLIF(e.name,''), e.title) as name, COALESCE(NULLIF(e.type,''), e.category) as type, e.description, e.location, e.price, e.time_period, e.image, e.images, COALESCE(e.rating, 4.90) as rating, COALESCE(e.reviews, 10) as reviews, e.available_from, e.available_to, e.created_by, COALESCE(u.full_name, u.name, e.created_by) as admin_name
+        $sql = "SELECT e.id, COALESCE(NULLIF(e.name,''), e.title) as name, COALESCE(NULLIF(e.type,''), e.category) as type, e.description, e.location, e.price, e.units, e.time_period, e.image, e.images, COALESCE(e.rating, 4.90) as rating, COALESCE(e.reviews, 10) as reviews, e.available_from, e.available_to, e.created_by, COALESCE(u.full_name, u.name, e.created_by) as admin_name
                 FROM equipment e
                 LEFT JOIN users u ON e.created_by = u.username
                 WHERE " . implode(' AND ', $where) . "
@@ -724,6 +765,12 @@ switch ($action) {
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
+        if (!empty($s_date) && $rows) {
+            $maxBookedUnits = getMaxBookedUnitsByItemForRange($db, 'equipment', array_column($rows, 'id'), $s_date, $e_date);
+            $rows = array_values(array_filter($rows, function ($item) use ($maxBookedUnits) {
+                return ($maxBookedUnits[(string)$item['id']] ?? 0) < (int)$item['units'];
+            }));
+        }
         applyReviewStats($db, 'equipment', $rows);
 
         // Check wishlist items for current guest
@@ -753,12 +800,13 @@ switch ($action) {
         $desc    = sanitize($_POST['description'] ?? '');
         $loc     = sanitize($_POST['location'] ?? '');
         $price   = (float)($_POST['price'] ?? 0);
+        $units   = (int)($_POST['units'] ?? 1);
         $period  = sanitize($_POST['time_period'] ?? '1 day');
         $avail_from = !empty($_POST['available_from']) ? $_POST['available_from'] : null;
         $avail_to   = !empty($_POST['available_to']) ? $_POST['available_to'] : null;
 
-        if (!$name || !$loc || $price <= 0) {
-            respond(['success' => false, 'message' => 'Name, location and price are required.'], 400);
+        if (!$name || !$loc || $price <= 0 || $units < 1) {
+            respond(['success' => false, 'message' => 'Name, location, a positive price and at least one available unit are required.'], 400);
         }
 
         $imgsArr = handleMultiImageUpload('images', 'equipment');
@@ -774,8 +822,8 @@ switch ($action) {
         $id = 'eq-' . uniqid();
 
         $db = getDB();
-        $stmt = $db->prepare("INSERT INTO equipment (id, name, title, type, category, description, location, price, time_period, image, images, available_from, available_to, created_by, rating, reviews) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0)");
-        $stmt->bind_param("sssssssdssssss", $id, $name, $name, $type, $type, $desc, $loc, $price, $period, $image, $imagesJson, $avail_from, $avail_to, $created_by);
+        $stmt = $db->prepare("INSERT INTO equipment (id, name, title, type, category, description, location, price, units, time_period, image, images, available_from, available_to, created_by, rating, reviews) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0)");
+        $stmt->bind_param("sssssssdissssss", $id, $name, $name, $type, $type, $desc, $loc, $price, $units, $period, $image, $imagesJson, $avail_from, $avail_to, $created_by);
         if ($stmt->execute()) {
             $stmt->close();
             respond(['success' => true, 'message' => "Equipment added successfully by @{$created_by}.", 'id' => $id]);
@@ -819,7 +867,7 @@ switch ($action) {
         $id = sanitize($_GET['id'] ?? '');
         if (!$id) respond(['success' => false, 'message' => 'ID required.'], 400);
         $db = getDB();
-        $stmt = $db->prepare("SELECT e.id, COALESCE(NULLIF(e.name,''), e.title) as name, COALESCE(NULLIF(e.type,''), e.category) as type, e.description, e.location, e.price, e.time_period, e.image, e.images, e.rating, e.reviews, e.available_from, e.available_to, e.created_by, COALESCE(u.full_name, u.name, e.created_by) as admin_name
+        $stmt = $db->prepare("SELECT e.id, COALESCE(NULLIF(e.name,''), e.title) as name, COALESCE(NULLIF(e.type,''), e.category) as type, e.description, e.location, e.price, e.units, e.time_period, e.image, e.images, e.rating, e.reviews, e.available_from, e.available_to, e.created_by, COALESCE(u.full_name, u.name, e.created_by) as admin_name
                              FROM equipment e
                              LEFT JOIN users u ON e.created_by = u.username
                              WHERE e.id=?");
@@ -1018,7 +1066,7 @@ switch ($action) {
         attachBlockedDateRanges($db, 'accommodation', $accommodations);
         attachBookedDateRanges($db, 'accommodation', $accommodations);
 
-        $stmt = $db->prepare("SELECT id, COALESCE(NULLIF(name,''), title) as name, COALESCE(NULLIF(model,''), type) as model, location, price, time_period, description, available_from, available_to, image, images, COALESCE(rating, 4.9) as rating, COALESCE(reviews, 10) as reviews, created_at, created_by FROM bikes WHERE created_by=? OR ?='admin' ORDER BY created_at DESC");
+        $stmt = $db->prepare("SELECT id, COALESCE(NULLIF(name,''), title) as name, COALESCE(NULLIF(model,''), type) as model, location, price, units, time_period, description, available_from, available_to, image, images, COALESCE(rating, 4.9) as rating, COALESCE(reviews, 10) as reviews, created_at, created_by FROM bikes WHERE created_by=? OR ?='admin' ORDER BY created_at DESC");
         $stmt->bind_param("ss", $admin_user, $admin_user);
         $stmt->execute();
         $bikes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -1026,7 +1074,7 @@ switch ($action) {
         attachBlockedDateRanges($db, 'bike', $bikes);
         attachBookedDateRanges($db, 'bike', $bikes);
 
-        $stmt = $db->prepare("SELECT id, COALESCE(NULLIF(name,''), title) as name, COALESCE(NULLIF(type,''), category) as type, location, price, time_period, description, available_from, available_to, image, images, COALESCE(rating, 4.9) as rating, COALESCE(reviews, 10) as reviews, created_at, created_by FROM equipment WHERE created_by=? OR ?='admin' ORDER BY created_at DESC");
+        $stmt = $db->prepare("SELECT id, COALESCE(NULLIF(name,''), title) as name, COALESCE(NULLIF(type,''), category) as type, location, price, units, time_period, description, available_from, available_to, image, images, COALESCE(rating, 4.9) as rating, COALESCE(reviews, 10) as reviews, created_at, created_by FROM equipment WHERE created_by=? OR ?='admin' ORDER BY created_at DESC");
         $stmt->bind_param("ss", $admin_user, $admin_user);
         $stmt->execute();
         $equipment = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -1193,6 +1241,33 @@ switch ($action) {
         $bookings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
 
+        // Build a live city earnings ranking from ALL existing bookings for this admin,
+        // independent of the currently selected date/type/status filters.
+        $rankStmt = $db->prepare("SELECT item_type, item_id, price, status FROM bookings WHERE created_by = ?");
+        $rankStmt->bind_param("s", $admin_user);
+        $rankStmt->execute();
+        $rankRows = $rankStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $rankStmt->close();
+        $locationEarnings = [];
+        foreach ($rankRows as $rankRow) {
+            if (($rankRow['status'] ?? '') === 'cancelled') continue;
+            $rankDetails = getItemDetails($db, $rankRow['item_type'], $rankRow['item_id']);
+            $rawLocation = trim((string)($rankDetails['location'] ?? ''));
+            if ($rawLocation === '') continue;
+            // Locations are stored as city/address text; use the first comma-separated
+            // segment as the city label (e.g. "Ella, Badulla" -> "Ella").
+            $cityParts = explode(',', $rawLocation);
+            $city = trim($cityParts[0]);
+            if ($city === '') $city = $rawLocation;
+            $cityKey = function_exists('mb_strtolower') ? mb_strtolower($city, 'UTF-8') : strtolower($city);
+            if (!isset($locationEarnings[$cityKey])) $locationEarnings[$cityKey] = ['city' => $city, 'earnings' => 0.0];
+            $locationEarnings[$cityKey]['earnings'] += (float)$rankRow['price'];
+        }
+        $locationEarnings = array_values($locationEarnings);
+        usort($locationEarnings, function($a, $b) { return $b['earnings'] <=> $a['earnings']; });
+        foreach ($locationEarnings as &$locationRow) $locationRow['earnings'] = round($locationRow['earnings'], 2);
+        unset($locationRow);
+
         $total_count = count($bookings);
         $total_earnings = 0.0;
         $paid_earnings = 0.0;
@@ -1203,6 +1278,8 @@ switch ($action) {
             $details = getItemDetails($db, $bk['item_type'], $bk['item_id']);
             $bk['item_name']        = $details['name'];
             $bk['item_location']    = $details['location'];
+            $locationParts = explode(',', trim((string)$details['location']));
+            $bk['item_city'] = trim($locationParts[0] ?? '');
             $bk['item_image']       = $details['image'];
             $bk['item_images']      = $details['images'] ?? '[]';
             $bk['item_description'] = $details['description'] ?? '';
@@ -1224,6 +1301,25 @@ switch ($action) {
             }
         }
 
+        if (!empty($_GET['location'])) {
+            $selectedCity = trim((string)$_GET['location']);
+            $bookings = array_values(array_filter($bookings, function($bk) use ($selectedCity) {
+                return strcasecmp(trim((string)($bk['item_city'] ?? '')), $selectedCity) === 0;
+            }));
+            // Recalculate summary for the selected city.
+            $total_count = count($bookings);
+            $total_earnings = $paid_earnings = $pending_earnings = 0.0;
+            $by_type = ['accommodation' => 0.0, 'bike' => 0.0, 'equipment' => 0.0, 'guide' => 0.0];
+            foreach ($bookings as $bk) {
+                $price = (float)$bk['price'];
+                if (($bk['status'] ?? '') === 'cancelled') continue;
+                $total_earnings += $price;
+                if (($bk['payment_status'] ?? '') === 'paid') $paid_earnings += $price;
+                else $pending_earnings += $price;
+                if (isset($by_type[$bk['item_type']])) $by_type[$bk['item_type']] += $price;
+            }
+        }
+
         $summary = [
             'total_count'      => $total_count,
             'total_earnings'   => round($total_earnings, 2),
@@ -1232,7 +1328,7 @@ switch ($action) {
             'by_type'          => $by_type
         ];
 
-        respond(['success' => true, 'data' => $bookings, 'summary' => $summary]);
+        respond(['success' => true, 'data' => $bookings, 'summary' => $summary, 'location_earnings' => $locationEarnings]);
         break;
 
 
@@ -1244,6 +1340,7 @@ switch ($action) {
             respond(['success' => false, 'message' => 'Only Guest accounts can make bookings. Admins manage listings.'], 403);
         }
         if ($method !== 'POST') respond(['success' => false, 'message' => 'POST required'], 405);
+        $payhere_notify_url = getPayHereNotifyUrl();
 
         $item_type   = sanitize($_POST['item_type'] ?? '');
         $item_id     = sanitize($_POST['item_id'] ?? '');
@@ -1270,13 +1367,15 @@ switch ($action) {
         // Check if requested dates overlap a paid booking or an Admin block.
         $chk_start = $start_date;
         $chk_end = $end_date;
-        $check = $db->prepare("SELECT id, start_date, end_date FROM bookings WHERE item_type=? AND item_id=? AND status!='cancelled' AND payment_status='paid' AND start_date IS NOT NULL AND start_date <= ? AND COALESCE(end_date, start_date) >= ?");
-        $check->bind_param("ssss", $item_type, $item_id, $chk_end, $chk_start);
-        $check->execute();
-        $conflict = $check->get_result()->fetch_assoc();
-        $check->close();
-        if ($conflict) {
-            respond(['success' => false, 'message' => "This item is already reserved from {$conflict['start_date']} to {$conflict['end_date']}. All other dates are available!"], 400);
+        if (!in_array($item_type, ['accommodation', 'bike', 'equipment'], true)) {
+            $check = $db->prepare("SELECT id, start_date, end_date FROM bookings WHERE item_type=? AND item_id=? AND status!='cancelled' AND payment_status='paid' AND start_date IS NOT NULL AND start_date <= ? AND COALESCE(end_date, start_date) >= ?");
+            $check->bind_param("ssss", $item_type, $item_id, $chk_end, $chk_start);
+            $check->execute();
+            $conflict = $check->get_result()->fetch_assoc();
+            $check->close();
+            if ($conflict) {
+                respond(['success' => false, 'message' => "This item is already reserved from {$conflict['start_date']} to {$conflict['end_date']}. All other dates are available!"], 400);
+            }
         }
         $blockCheck = $db->prepare("SELECT start_date, end_date FROM item_date_blocks WHERE item_type=? AND item_id=? AND start_date <= ? AND end_date >= ? LIMIT 1");
         if (!$blockCheck) respond(['success' => false, 'message' => 'Unable to verify date availability: ' . $db->error], 500);
@@ -1296,7 +1395,7 @@ switch ($action) {
             'guide'         => 'guides',
         ];
         $table = $tableMap[$item_type];
-        $itemQuery = $item_type === 'accommodation'
+        $itemQuery = in_array($item_type, ['accommodation', 'bike', 'equipment'], true)
             ? "SELECT created_by, price, units FROM `{$table}` WHERE id=?"
             : "SELECT created_by, price FROM `{$table}` WHERE id=?";
         $stmt = $db->prepare($itemQuery);
@@ -1308,20 +1407,26 @@ switch ($action) {
 
         if (!$item) respond(['success' => false, 'message' => 'Item not found or no longer available.'], 404);
         $admin_owner = $item['created_by'] ?: 'admin';
-        $units = $item_type === 'accommodation' ? $requested_units : 1;
-        if ($units < 1 || ($item_type === 'accommodation' && $units > (int)$item['units'])) {
+        $units = in_array($item_type, ['accommodation', 'bike', 'equipment'], true) ? $requested_units : 1;
+        if ($units < 1 || (in_array($item_type, ['accommodation', 'bike', 'equipment'], true) && $units > (int)$item['units'])) {
             respond(['success' => false, 'message' => 'Requested units exceed the available quantity.'], 400);
+        }
+        if (in_array($item_type, ['accommodation', 'bike', 'equipment'], true)) {
+            $maxBookedUnits = getMaxBookedUnitsByItemForRange($db, $item_type, [$item_id], $chk_start, $chk_end);
+            $booked_units = $maxBookedUnits[$item_id] ?? 0;
+            if ($booked_units + $units > (int)$item['units']) {
+                $remaining_units = max(0, (int)$item['units'] - $booked_units);
+                $unit_name = $item_type === 'bike' ? 'bike' : ($item_type === 'accommodation' ? 'accommodation' : 'equipment');
+                respond(['success' => false, 'message' => "Only {$remaining_units} {$unit_name} unit(s) remain available for those dates."], 409);
+            }
         }
 
         $start = new DateTimeImmutable($start_date);
         $end = new DateTimeImmutable($end_date);
-        $days = max(1, (int)$start->diff($end)->days + (in_array($item_type, ['bike', 'guide'], true) ? 1 : 0));
+        $days = max(1, (int)$start->diff($end)->days + (in_array($item_type, ['bike', 'equipment', 'guide'], true) ? 1 : 0));
         $price = round((float)$item['price'] * $days * $units, 2);
         if ($price <= 0) respond(['success' => false, 'message' => 'This item has an invalid booking price.'], 400);
-        if ($price > PAYMENT_MAX_AMOUNT) {
-            respond(['success' => false, 'message' => 'The maximum payment allowed is ' . number_format(PAYMENT_MAX_AMOUNT, 2) . ' ' . PAYHERE_CURRENCY . '. Choose a shorter date range or fewer units.'], 400);
-        }
-        $time_period = in_array($item_type, ['bike', 'guide'], true)
+        $time_period = in_array($item_type, ['bike', 'equipment', 'guide'], true)
             ? $days . ' day' . ($days > 1 ? 's' : '')
             : sanitize($_POST['time_period'] ?? ($days . ' day' . ($days > 1 ? 's' : '')));
 
@@ -1368,7 +1473,7 @@ switch ($action) {
                     'merchant_id'   => PAYHERE_MERCHANT_ID,
                     'return_url'    => '',
                     'cancel_url'    => '',
-                    'notify_url'    => '/New/api.php?action=payhere_notify',
+                    'notify_url'    => $payhere_notify_url,
                     'order_id'      => $order_id,
                     'items'         => $item_name,
                     'amount'        => $amount_formatted,
@@ -1391,6 +1496,7 @@ switch ($action) {
 
     case 'get_booking_payment_data':
         requireLogin();
+        $payhere_notify_url = getPayHereNotifyUrl();
         $bk_id = (int)($_GET['booking_id'] ?? $_POST['booking_id'] ?? 0);
         if (!$bk_id) respond(['success' => false, 'message' => 'Booking ID required.'], 400);
         $db = getDB();
@@ -1402,9 +1508,6 @@ switch ($action) {
         if (!$bk) respond(['success' => false, 'message' => 'Booking not found.'], 404);
         if ($bk['customer_username'] !== $_SESSION['username'] && ($_SESSION['role'] ?? '') !== 'Admin') {
             respond(['success' => false, 'message' => 'Unauthorized booking access.'], 403);
-        }
-        if ((float)$bk['price'] > PAYMENT_MAX_AMOUNT) {
-            respond(['success' => false, 'message' => 'This booking exceeds the maximum payment of ' . number_format(PAYMENT_MAX_AMOUNT, 2) . ' ' . PAYHERE_CURRENCY . '.'], 400);
         }
         $order_id = $bk['order_id'] ?: ('ORDER_' . $bk['id'] . '_' . time());
         if (!$bk['order_id']) {
@@ -1440,7 +1543,7 @@ switch ($action) {
                 'merchant_id'   => PAYHERE_MERCHANT_ID,
                 'return_url'    => '',
                 'cancel_url'    => '',
-                'notify_url'    => '/New/api.php?action=payhere_notify',
+                'notify_url'    => $payhere_notify_url,
                 'order_id'      => $order_id,
                 'items'         => $item_name,
                 'amount'        => $amount_formatted,
@@ -1539,67 +1642,7 @@ switch ($action) {
 
     case 'confirm_payment':
         requireLogin();
-        $booking_id = (int)($_POST['booking_id'] ?? $_GET['booking_id'] ?? 0);
-        $order_id   = sanitize($_POST['order_id'] ?? '');
-        $payment_id = sanitize($_POST['payment_id'] ?? ('PH-' . strtoupper(substr(md5(uniqid()), 0, 10))));
-        $pay_method = !empty($_POST['payment_method']) ? sanitize($_POST['payment_method']) : 'PayHere Payment Gateway';
-
-        if (!$booking_id) respond(['success' => false, 'message' => 'Booking ID required.'], 400);
-
-        $db = getDB();
-        $stmt = $db->prepare("SELECT b.*, u.full_name, u.name, u.email, u.phone FROM bookings b LEFT JOIN users u ON b.customer_username = u.username WHERE b.id = ?");
-        $stmt->bind_param("i", $booking_id);
-        $stmt->execute();
-        $bk = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-
-        if (!$bk) respond(['success' => false, 'message' => 'Booking not found.'], 404);
-        if ($bk['customer_username'] !== $_SESSION['username'] && ($_SESSION['role'] ?? '') !== 'Admin') {
-            respond(['success' => false, 'message' => 'Unauthorized booking access.'], 403);
-        }
-        if ((float)$bk['price'] > PAYMENT_MAX_AMOUNT) {
-            respond(['success' => false, 'message' => 'This booking exceeds the maximum payment of ' . number_format(PAYMENT_MAX_AMOUNT, 2) . ' ' . PAYHERE_CURRENCY . '.'], 400);
-        }
-
-        $now = date('Y-m-d H:i:s');
-        $upd = $db->prepare("UPDATE bookings SET status='confirmed', payment_status='paid', payment_method=?, payment_id=?, paid_at=? WHERE id=?");
-        $upd->bind_param("sssi", $pay_method, $payment_id, $now, $booking_id);
-        $upd->execute();
-        $upd->close();
-
-        $item_name = getItemName($db, $bk['item_type'], $bk['item_id']);
-        $cust_name = !empty($bk['full_name']) ? $bk['full_name'] : (!empty($bk['name']) ? $bk['name'] : $bk['customer_username']);
-
-        $receipt = [
-            'receipt_no'       => 'TG-REC-' . str_pad((string)$booking_id, 5, '0', STR_PAD_LEFT),
-            'booking_id'       => $booking_id,
-            'order_id'         => $bk['order_id'] ?: $order_id,
-            'payment_id'       => $payment_id,
-            'payment_method'   => $pay_method,
-            'merchant_id'      => PAYHERE_MERCHANT_ID,
-            'payment_status'   => 'PAID',
-            'status'           => 'confirmed',
-            'paid_at'          => $now,
-            'item_name'        => $item_name,
-            'item_type'        => $bk['item_type'],
-            'start_date'       => $bk['start_date'],
-            'end_date'         => $bk['end_date'],
-            'time_period'      => $bk['time_period'],
-            'units'            => $bk['units'],
-            'amount'           => number_format((float)$bk['price'], 2, '.', ''),
-            'currency'         => PAYHERE_CURRENCY,
-            'customer_name'    => $cust_name,
-            'customer_username'=> $bk['customer_username'],
-            'customer_email'   => $bk['email'],
-            'customer_phone'   => $bk['phone'],
-        ];
-
-        respond([
-            'success' => true,
-            'message' => 'Payment received successfully via PayHere! You can now download your official receipt.',
-            'receipt' => $receipt
-        ]);
-        break;
+        respond(['success' => false, 'message' => 'Payment can only be confirmed by PayHere’s verified server notification.'], 405);
 
     case 'get_receipt':
         requireLogin();
@@ -1657,6 +1700,10 @@ switch ($action) {
         $md5sig           = $_POST['md5sig'] ?? '';
         $payment_id       = $_POST['payment_id'] ?? '';
 
+        if ($merchant_id === '' || $order_id === '' || $payhere_amount === '' || $payhere_currency === '' || $status_code === '' || $md5sig === '' || $payment_id === '') {
+            respond(['success' => false, 'message' => 'PayHere notification is missing required fields.'], 400);
+        }
+
         $local_md5sig = strtoupper(
             md5(
                 $merchant_id . 
@@ -1668,24 +1715,33 @@ switch ($action) {
             )
         );
 
-        if (($local_md5sig === $md5sig) && ($status_code == 2) && $merchant_id === PAYHERE_MERCHANT_ID && $payhere_currency === PAYHERE_CURRENCY) {
-            $db = getDB();
-            $bkStmt = $db->prepare("SELECT price FROM bookings WHERE order_id=? AND payment_status!='paid'");
-            if (!$bkStmt) respond(['success' => false, 'message' => 'Unable to verify payment amount.'], 500);
-            $bkStmt->bind_param("s", $order_id);
-            $bkStmt->execute();
-            $pendingBooking = $bkStmt->get_result()->fetch_assoc();
-            $bkStmt->close();
-            if (!$pendingBooking || (float)$pendingBooking['price'] > PAYMENT_MAX_AMOUNT || number_format((float)$pendingBooking['price'], 2, '.', '') !== number_format((float)$payhere_amount, 2, '.', '')) {
-                respond(['success' => false, 'message' => 'Payment amount does not match the booking.'], 400);
-            }
-            $now = date('Y-m-d H:i:s');
-            $stmt = $db->prepare("UPDATE bookings SET status='confirmed', payment_status='paid', payment_method='PayHere', payment_id=?, paid_at=? WHERE order_id=?");
-            if (!$stmt) respond(['success' => false, 'message' => 'Unable to confirm payment.'], 500);
-            $stmt->bind_param("sss", $payment_id, $now, $order_id);
-            $stmt->execute();
-            $stmt->close();
+        if (!hash_equals($local_md5sig, strtoupper($md5sig))
+            || $merchant_id !== (string)PAYHERE_MERCHANT_ID
+            || $payhere_currency !== PAYHERE_CURRENCY
+            || !preg_match('/^\d+(?:\.\d{1,2})?$/', $payhere_amount)) {
+            respond(['success' => false, 'message' => 'PayHere notification signature or payment details are invalid.'], 400);
         }
+
+        if ($status_code !== '2') respond(['success' => true]);
+
+        $db = getDB();
+        $bkStmt = $db->prepare("SELECT price, payment_status FROM bookings WHERE order_id=? LIMIT 1");
+        if (!$bkStmt) respond(['success' => false, 'message' => 'Unable to verify payment amount.'], 500);
+        $bkStmt->bind_param("s", $order_id);
+        $bkStmt->execute();
+        $pendingBooking = $bkStmt->get_result()->fetch_assoc();
+        $bkStmt->close();
+        if (!$pendingBooking || number_format((float)$pendingBooking['price'], 2, '.', '') !== number_format((float)$payhere_amount, 2, '.', '')) {
+            respond(['success' => false, 'message' => 'Payment amount does not match the booking.'], 400);
+        }
+        if ($pendingBooking['payment_status'] === 'paid') respond(['success' => true]);
+
+        $now = date('Y-m-d H:i:s');
+        $stmt = $db->prepare("UPDATE bookings SET status='confirmed', payment_status='paid', payment_method='PayHere', payment_id=?, paid_at=? WHERE order_id=? AND payment_status!='paid'");
+        if (!$stmt) respond(['success' => false, 'message' => 'Unable to confirm payment.'], 500);
+        $stmt->bind_param("sss", $payment_id, $now, $order_id);
+        if (!$stmt->execute()) respond(['success' => false, 'message' => 'Unable to save payment confirmation.'], 500);
+        $stmt->close();
         respond(['success' => true]);
         break;
 
@@ -1996,18 +2052,22 @@ switch ($action) {
             $upd->bind_param("sssssdisssss", $name, $name, $subType, $desc, $loc, $price, $units, $primaryImg, $imgsJson, $af, $at, $id);
         } elseif ($type === 'bike') {
             $model = sanitize($_POST['model'] ?? 'City Bike');
+            $units = (int)($_POST['units'] ?? 1);
             $tp = sanitize($_POST['time_period'] ?? '1 day');
             $af = !empty($_POST['available_from']) ? $_POST['available_from'] : null;
             $at = !empty($_POST['available_to']) ? $_POST['available_to'] : null;
-            $upd = $db->prepare("UPDATE bikes SET name=?, title=?, model=?, type=?, description=?, location=?, price=?, time_period=?, image=?, images=?, available_from=?, available_to=? WHERE id=?");
-            $upd->bind_param("ssssssdssssss", $name, $name, $model, $model, $desc, $loc, $price, $tp, $primaryImg, $imgsJson, $af, $at, $id);
+            if ($units < 1) respond(['success' => false, 'message' => 'At least one bike unit is required.'], 400);
+            $upd = $db->prepare("UPDATE bikes SET name=?, title=?, model=?, type=?, description=?, location=?, price=?, units=?, time_period=?, image=?, images=?, available_from=?, available_to=? WHERE id=?");
+            $upd->bind_param("ssssssdissssss", $name, $name, $model, $model, $desc, $loc, $price, $units, $tp, $primaryImg, $imgsJson, $af, $at, $id);
         } elseif ($type === 'equipment') {
             $subType = sanitize($_POST['type'] ?? 'Other');
+            $units = (int)($_POST['units'] ?? 1);
             $tp = sanitize($_POST['time_period'] ?? '1 day');
             $af = !empty($_POST['available_from']) ? $_POST['available_from'] : null;
             $at = !empty($_POST['available_to']) ? $_POST['available_to'] : null;
-            $upd = $db->prepare("UPDATE equipment SET name=?, title=?, type=?, category=?, description=?, location=?, price=?, time_period=?, image=?, images=?, available_from=?, available_to=? WHERE id=?");
-            $upd->bind_param("ssssssdssssss", $name, $name, $subType, $subType, $desc, $loc, $price, $tp, $primaryImg, $imgsJson, $af, $at, $id);
+            if ($units < 1) respond(['success' => false, 'message' => 'At least one equipment unit is required.'], 400);
+            $upd = $db->prepare("UPDATE equipment SET name=?, title=?, type=?, category=?, description=?, location=?, price=?, units=?, time_period=?, image=?, images=?, available_from=?, available_to=? WHERE id=?");
+            $upd->bind_param("ssssssdissssss", $name, $name, $subType, $subType, $desc, $loc, $price, $units, $tp, $primaryImg, $imgsJson, $af, $at, $id);
         } elseif ($type === 'guide') {
             $title = sanitize($_POST['title'] ?? $name); // fall back to name if not sent
             $exp = sanitize($_POST['experience'] ?? '');
@@ -2180,9 +2240,54 @@ function getItemDetails($db, $type, $id) {
     return $row ?: ['name' => 'Archived Item', 'location' => '', 'price' => 0, 'image' => 'image/icon.jpg', 'images' => '[]', 'description' => '', 'rating' => 0, 'reviews' => 0, 'created_by' => 'admin'];
 }
 
+function getMaxBookedUnitsByItemForRange($db, $type, $itemIds, $startDate, $endDate) {
+    $itemIds = array_values(array_unique(array_filter(array_map('strval', $itemIds))));
+    if (!$itemIds) return [];
+
+    $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
+    $sql = "SELECT item_id, start_date, COALESCE(end_date, start_date) AS end_date, GREATEST(COALESCE(NULLIF(units,0),1),1) AS units
+            FROM bookings
+            WHERE item_type=? AND status!='cancelled' AND payment_status='paid'
+              AND start_date IS NOT NULL AND start_date <= ? AND COALESCE(end_date, start_date) >= ?
+              AND item_id IN ({$placeholders})";
+    $stmt = $db->prepare($sql);
+    if (!$stmt) throw new RuntimeException('Unable to verify ' . $type . ' availability: ' . $db->error);
+    $params = array_merge([$type, $endDate, $startDate], $itemIds);
+    $stmt->bind_param(str_repeat('s', count($params)), ...$params);
+    if (!$stmt->execute()) {
+        $error = $stmt->error;
+        $stmt->close();
+        throw new RuntimeException('Unable to verify ' . $type . ' availability: ' . $error);
+    }
+
+    $eventsByItem = [];
+    $result = $stmt->get_result();
+    while ($booking = $result->fetch_assoc()) {
+        $itemId = (string)$booking['item_id'];
+        $rangeStart = max($startDate, $booking['start_date']);
+        $rangeEnd = min($endDate, $booking['end_date']);
+        $units = max(1, (int)$booking['units']);
+        $afterRangeEnd = (new DateTimeImmutable($rangeEnd))->modify('+1 day')->format('Y-m-d');
+        $eventsByItem[$itemId][$rangeStart] = ($eventsByItem[$itemId][$rangeStart] ?? 0) + $units;
+        $eventsByItem[$itemId][$afterRangeEnd] = ($eventsByItem[$itemId][$afterRangeEnd] ?? 0) - $units;
+    }
+    $stmt->close();
+
+    $maxBookedUnits = [];
+    foreach ($eventsByItem as $itemId => $events) {
+        ksort($events);
+        $bookedUnits = 0;
+        foreach ($events as $change) {
+            $bookedUnits += $change;
+            $maxBookedUnits[$itemId] = max($maxBookedUnits[$itemId] ?? 0, $bookedUnits);
+        }
+    }
+    return $maxBookedUnits;
+}
+
 function getBookedDateRanges($db, $type, $id) {
     $ranges = [];
-    $stmt = $db->prepare("SELECT id, start_date, end_date FROM bookings WHERE item_type=? AND item_id=? AND status!='cancelled' AND payment_status='paid' AND start_date IS NOT NULL ORDER BY start_date ASC");
+    $stmt = $db->prepare("SELECT id, start_date, end_date, units FROM bookings WHERE item_type=? AND item_id=? AND status!='cancelled' AND payment_status='paid' AND start_date IS NOT NULL ORDER BY start_date ASC");
     if ($stmt) {
         $stmt->bind_param("ss", $type, $id);
         $stmt->execute();
@@ -2191,6 +2296,7 @@ function getBookedDateRanges($db, $type, $id) {
             $ranges[] = [
                 'start_date' => $r['start_date'],
                 'end_date'   => $r['end_date'] ?: $r['start_date'],
+                'units'      => max(1, (int)($r['units'] ?? 1)),
             ];
         }
         $stmt->close();

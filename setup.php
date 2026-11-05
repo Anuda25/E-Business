@@ -108,6 +108,7 @@ $sql = "CREATE TABLE IF NOT EXISTS `bikes` (
     `description` TEXT,
     `location` VARCHAR(200) NOT NULL DEFAULT '',
     `price` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `units` INT NOT NULL DEFAULT 1,
     `time_period` VARCHAR(50) DEFAULT '1 day',
     `image` VARCHAR(255) DEFAULT '',
     `images` TEXT DEFAULT NULL,
@@ -124,6 +125,7 @@ if ($conn_setup->query($sql)) {
 ensureColumn($conn_setup, 'bikes', 'name', "VARCHAR(200) NOT NULL DEFAULT ''");
 ensureColumn($conn_setup, 'bikes', 'title', "VARCHAR(200) NOT NULL DEFAULT ''");
 ensureColumn($conn_setup, 'bikes', 'model', "VARCHAR(100) NOT NULL DEFAULT 'City Bike'");
+ensureColumn($conn_setup, 'bikes', 'units', "INT NOT NULL DEFAULT 1");
 ensureColumn($conn_setup, 'bikes', 'images', "TEXT DEFAULT NULL");
 ensureColumn($conn_setup, 'bikes', 'time_period', "VARCHAR(50) DEFAULT '1 day'");
 ensureColumn($conn_setup, 'bikes', 'available_from', "DATE DEFAULT NULL");
@@ -145,6 +147,7 @@ $sql = "CREATE TABLE IF NOT EXISTS `equipment` (
     `description` TEXT,
     `location` VARCHAR(200) NOT NULL DEFAULT '',
     `price` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `units` INT NOT NULL DEFAULT 1,
     `deposit` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     `time_period` VARCHAR(50) DEFAULT '1 day',
     `image` VARCHAR(255) DEFAULT '',
@@ -164,6 +167,7 @@ ensureColumn($conn_setup, 'equipment', 'title', "VARCHAR(200) NOT NULL DEFAULT '
 ensureColumn($conn_setup, 'equipment', 'type', "VARCHAR(100) NOT NULL DEFAULT 'Other'");
 ensureColumn($conn_setup, 'equipment', 'category', "VARCHAR(100) NOT NULL DEFAULT 'Other'");
 ensureColumn($conn_setup, 'equipment', 'images', "TEXT DEFAULT NULL");
+ensureColumn($conn_setup, 'equipment', 'units', "INT NOT NULL DEFAULT 1");
 ensureColumn($conn_setup, 'equipment', 'deposit', "DECIMAL(10,2) NOT NULL DEFAULT 0.00");
 ensureColumn($conn_setup, 'equipment', 'rating', "DECIMAL(3,2) DEFAULT 0.00");
 ensureColumn($conn_setup, 'equipment', 'reviews', "INT DEFAULT 0");
@@ -372,7 +376,7 @@ if ($guest_exists) {
     $stmt->close();
 }
 
-// 11. Catalog Seeding (At least 2 items for every sub-item with distinct photos & multi-image arrays)
+// 11. Catalog seeding; INSERT IGNORE keeps these sample listings idempotent.
 $seed_accommodations = [
     // Villa (3 items)
     ['id'=>'acc-1', 'name'=>'Luxury Palm Villa & Private Pool', 'type'=>'Villa', 'desc'=>'Architectural oceanfront masterpiece with private infinity pool, tropical gardens, chef service, and sunset views.', 'loc'=>'Mirissa, Sri Lanka', 'price'=>260.00, 'units'=>2, 'img'=>'image/accommodation/acc-villa-1.jpg', 'imgs'=>['image/accommodation/acc-villa-1.jpg', 'image/accommodation/acc-villa-1-2.jpg']],
@@ -386,6 +390,9 @@ $seed_accommodations = [
     ['id'=>'acc-room-1', 'name'=>'Deluxe Oceanview King Room', 'type'=>'Room', 'desc'=>'Spacious king suite with private balcony overlooking Unawatuna Bay. Includes artisan breakfast and air conditioning.', 'loc'=>'Unawatuna, Sri Lanka', 'price'=>65.00, 'units'=>5, 'img'=>'image/accommodation/acc-room-1.jpg', 'imgs'=>['image/accommodation/acc-room-1.jpg', 'image/accommodation/acc-room-1-2.jpg']],
     ['id'=>'acc-room-2', 'name'=>'Botanical Sanctuary Garden Room', 'type'=>'Room', 'desc'=>'Quiet and serene boutique garden room next to the Royal Botanical Gardens. Natural wood decor and high ceilings.', 'loc'=>'Kandy, Sri Lanka', 'price'=>55.00, 'units'=>4, 'img'=>'image/accommodation/acc-room-2.jpg', 'imgs'=>['image/accommodation/acc-room-2.jpg', 'image/accommodation/acc-room-1.jpg']],
     ['id'=>'acc-room-3', 'name'=>'Surfside Cabana Room', 'type'=>'Room', 'desc'=>'Cozy thatched-roof eco-cabana room situated directly on the surf beach point. Step straight onto the golden sand.', 'loc'=>'Arugam Bay, Sri Lanka', 'price'=>45.00, 'units'=>6, 'img'=>'image/accommodation/acc-room-3.jpg', 'imgs'=>['image/accommodation/acc-room-3.jpg', 'image/accommodation/acc-villa-2.jpg']],
+    ['id'=>'acc-villa-demo-4', 'name'=>'Ella Cloudforest Retreat Villa', 'type'=>'Villa', 'desc'=>'Private hillside villa with a garden terrace, a full kitchen, and sweeping views across the Ella Gap.', 'loc'=>'Ella, Sri Lanka', 'price'=>185.00, 'units'=>2, 'img'=>'image/accommodation/acc-villa-3.jpg', 'imgs'=>['image/accommodation/acc-villa-3.jpg', 'image/accommodation/acc-villa-3-2.jpg']],
+    ['id'=>'acc-apt-demo-4', 'name'=>'Kandy Lakeview City Apartment', 'type'=>'Apartment', 'desc'=>'Bright two-bedroom apartment near Kandy Lake with a furnished balcony and convenient access to the city center.', 'loc'=>'Kandy, Sri Lanka', 'price'=>98.00, 'units'=>2, 'img'=>'image/accommodation/acc-apt-3.jpg', 'imgs'=>['image/accommodation/acc-apt-3.jpg', 'image/accommodation/acc-apt-1-2.jpg']],
+    ['id'=>'acc-room-demo-4', 'name'=>'Galle Fort Courtyard Guest Room', 'type'=>'Room', 'desc'=>'Comfortable private room in a restored courtyard home, a short walk from Galle Fort landmarks and cafes.', 'loc'=>'Galle Fort, Sri Lanka', 'price'=>52.00, 'units'=>3, 'img'=>'image/accommodation/acc-room-2.jpg', 'imgs'=>['image/accommodation/acc-room-2.jpg', 'image/accommodation/acc-room-1.jpg']],
 ];
 
 foreach ($seed_accommodations as $item) {
@@ -410,6 +417,10 @@ $seed_bikes = [
     // Electric Bike (2 items)
     ['id'=>'bike-ebike-1', 'name'=>'RadPower RadCity Step-Thru E-Bike', 'model'=>'Electric Bike', 'desc'=>'Effortless electric bike with 750W motor and 45-mile battery range. Breeze up hills with 5 levels of pedal assist.', 'loc'=>'Kandy Lake Promenade', 'price'=>35.00, 'period'=>'1 day', 'img'=>'image/bikes/bike-ebike-1.jpg', 'imgs'=>['image/bikes/bike-ebike-1.jpg', 'image/bikes/bike-ebike-2.jpg']],
     ['id'=>'bike-ebike-2', 'name'=>'Specialized Turbo Vado Electric Cruiser', 'model'=>'Electric Bike', 'desc'=>'Premium Swiss-engineered electric touring bike with smooth pedal assistance, integrated LED headlights, and digital display.', 'loc'=>'Mirissa Beach Strip', 'price'=>40.00, 'period'=>'1 day', 'img'=>'image/bikes/bike-ebike-2.jpg', 'imgs'=>['image/bikes/bike-ebike-2.jpg', 'image/bikes/bike-ebike-1.jpg']],
+    ['id'=>'bike-mtn-3', 'name'=>'Highland Ridge Trail Mountain Bike', 'model'=>'Mountain Bike', 'desc'=>'Reliable front-suspension trail bike with grippy tires and a wide gear range for steep highland routes.', 'loc'=>'Nuwara Eliya, Sri Lanka', 'price'=>27.00, 'period'=>'1 day', 'img'=>'image/bikes/bike-mtn-1.jpg', 'imgs'=>['image/bikes/bike-mtn-1.jpg', 'image/bikes/bike-mtn-2.jpg']],
+    ['id'=>'bike-road-3', 'name'=>'Southern Coast Endurance Road Bike', 'model'=>'Road Bike', 'desc'=>'Lightweight endurance road bike with a comfortable riding position for long coastal day trips.', 'loc'=>'Galle Coastal Route', 'price'=>29.00, 'period'=>'1 day', 'img'=>'image/bikes/bike-road-1.jpg', 'imgs'=>['image/bikes/bike-road-1.jpg', 'image/bikes/bike-road-2.jpg']],
+    ['id'=>'bike-city-3', 'name'=>'Galle Fort Comfort City Bicycle', 'model'=>'City Bike', 'desc'=>'Easy-riding city bicycle with an upright handlebar, rear rack, and lock for relaxed fort and town visits.', 'loc'=>'Galle Fort, Sri Lanka', 'price'=>13.00, 'period'=>'1 day', 'img'=>'image/bikes/bike-city-1.jpg', 'imgs'=>['image/bikes/bike-city-1.jpg', 'image/bikes/bike-city-2.jpg']],
+    ['id'=>'bike-ebike-3', 'name'=>'Coastal Breeze Touring E-Bike', 'model'=>'Electric Bike', 'desc'=>'Comfortable pedal-assist touring bike with integrated lights and a long-range battery for coastal sightseeing.', 'loc'=>'Negombo, Sri Lanka', 'price'=>34.00, 'period'=>'1 day', 'img'=>'image/bikes/bike-ebike-1.jpg', 'imgs'=>['image/bikes/bike-ebike-1.jpg', 'image/bikes/bike-ebike-2.jpg']],
     // Extra Classic items (Cruiser & Dirt Bike)
     ['id'=>'bike-1', 'name'=>'Royal Enfield Classic 350 Gold', 'model'=>'Road Bike', 'desc'=>'Iconic vintage motorcycle perfect for cruising scenic Southern coastal roads. Serviced regularly with deep exhaust rumble.', 'loc'=>'Galle & South Coast', 'price'=>35.00, 'period'=>'1 day', 'img'=>'image/bikes/bike-enfield.jpg', 'imgs'=>['image/bikes/bike-enfield.jpg', 'image/bikes/bike-road-1.jpg']],
     ['id'=>'bike-2', 'name'=>'Honda CRF 250 Rally Dirt Bike', 'model'=>'Mountain Bike', 'desc'=>'Conquer mountain trails, tea estate dirt roads, and rugged terrain with high ground clearance and long travel suspension.', 'loc'=>'Ella & Central Highlands', 'price'=>45.00, 'period'=>'1 day', 'img'=>'image/bikes/bike-dirt.jpg', 'imgs'=>['image/bikes/bike-dirt.jpg', 'image/bikes/bike-mtn-1.jpg']],
@@ -443,6 +454,12 @@ $seed_equipment = [
     // Camping Gear (2 items)
     ['id'=>'eq-camp-1', 'name'=>'4-Person Waterproof Expedition Tent', 'type'=>'Camping Gear', 'desc'=>'Double-layer weatherproof camping tent with thermal floor, pop-up assembly, sleeping pads, and LED lantern.', 'loc'=>'Horton Plains / Ella', 'price'=>20.00, 'period'=>'1 day', 'img'=>'image/equipment/eq-camp-1.jpg', 'imgs'=>['image/equipment/eq-camp-1.jpg', 'image/equipment/eq-camp-2.jpg']],
     ['id'=>'eq-camp-2', 'name'=>'MSR Hubba Hubba 2-Person Ultralight Tent', 'type'=>'Camping Gear', 'desc'=>'Ultralight 2-person freestanding backpacking tent with rainfly, compact carry sack, and storm stakes.', 'loc'=>'Knuckles Range Campsites', 'price'=>16.00, 'period'=>'1 day', 'img'=>'image/equipment/eq-camp-2.jpg', 'imgs'=>['image/equipment/eq-camp-2.jpg', 'image/equipment/eq-camp-1.jpg']],
+    ['id'=>'eq-surf-3', 'name'=>'Coastline All-Rounder Surfboard', 'type'=>'Surfboard', 'desc'=>'Stable all-round surfboard supplied with a leash and wax, suitable for mellow beach breaks and progressing surfers.', 'loc'=>'Weligama Bay', 'price'=>13.00, 'period'=>'1 day', 'img'=>'image/equipment/eq-surf-1.jpg', 'imgs'=>['image/equipment/eq-surf-1.jpg', 'image/equipment/eq-surf-2.jpg']],
+    ['id'=>'eq-sk-3', 'name'=>'City Cruiser Complete Skateboard', 'type'=>'Skateboard', 'desc'=>'Ready-to-ride cruiser board with soft wheels for smooth rides on promenades and paved paths.', 'loc'=>'Galle Face Green, Colombo', 'price'=>9.00, 'period'=>'1 day', 'img'=>'image/equipment/eq-sk-1.jpg', 'imgs'=>['image/equipment/eq-sk-1.jpg', 'image/equipment/eq-sk-2.jpg']],
+    ['id'=>'eq-bt-3', 'name'=>'Lagoon Explorer Boat Charter', 'type'=>'Boat', 'desc'=>'Small-group lagoon outing with a local captain, shaded seating, and standard onboard safety equipment.', 'loc'=>'Negombo Lagoon', 'price'=>68.00, 'period'=>'3 hours', 'img'=>'image/equipment/eq-bt-1.jpg', 'imgs'=>['image/equipment/eq-bt-1.jpg', 'image/equipment/eq-bt-2.jpg']],
+    ['id'=>'eq-ky-3', 'name'=>'Mangrove Discovery Single Kayak', 'type'=>'Kayak', 'desc'=>'Stable single kayak with paddle and buoyancy aid for guided or independent calm-water exploration.', 'loc'=>'Madu River, Sri Lanka', 'price'=>18.00, 'period'=>'1 day', 'img'=>'image/equipment/eq-ky-1.jpg', 'imgs'=>['image/equipment/eq-ky-1.jpg', 'image/equipment/eq-ky-2.jpg']],
+    ['id'=>'eq-sn-3', 'name'=>'Reef Day Snorkel Equipment Set', 'type'=>'Snorkeling Gear', 'desc'=>'Adjustable mask, snorkel, and fins set available in multiple sizes for a comfortable reef day trip.', 'loc'=>'Hikkaduwa, Sri Lanka', 'price'=>12.00, 'period'=>'1 day', 'img'=>'image/equipment/eq-sn-1.jpg', 'imgs'=>['image/equipment/eq-sn-1.jpg', 'image/equipment/eq-sn-2.jpg']],
+    ['id'=>'eq-camp-3', 'name'=>'Weekend Trail Camping Bundle', 'type'=>'Camping Gear', 'desc'=>'Practical tent and lantern bundle for a weekend outdoors, with a compact carry bag for easy transport.', 'loc'=>'Horton Plains, Sri Lanka', 'price'=>18.00, 'period'=>'1 day', 'img'=>'image/equipment/eq-camp-1.jpg', 'imgs'=>['image/equipment/eq-camp-1.jpg', 'image/equipment/eq-camp-2.jpg']],
 ];
 
 foreach ($seed_equipment as $item) {
@@ -467,6 +484,10 @@ $seed_guides = [
     // Mountain (2 guides)
     ['id'=>'guide-mtn-1', 'name'=>'Aruna Bandara', 'title'=>'Knuckles Range & Adams Peak Trekking Guide', 'desc'=>'Elite mountain guide specializing in multi-day Knuckles Range cloud-forest expeditions and Adams Peak sunrise ascents.', 'exp'=>'Over 300 successful summit climbs & wilderness first-aid certified', 'price'=>55.00, 'rating'=>4.91, 'loc'=>'Knuckles Range & Adams Peak', 'img'=>'image/guides/guide-aruna.jpg', 'imgs'=>['image/guides/guide-aruna.jpg'], 'tags'=>json_encode(['Mountain','Trekking','Sunrise Climb'])],
     ['id'=>'guide-mtn-2', 'name'=>'Nuwan Gamage', 'title'=>'Ella Rock & High Plains Trekking Specialist', 'desc'=>'Central highlands hiking expert guiding Ella Rock, Little Adams Peak, and Mini Worlds End with tea estate history.', 'exp'=>'9 years guiding highland trails and mountain passes', 'price'=>46.00, 'rating'=>4.89, 'loc'=>'Ella & Haputale Highlands', 'img'=>'image/guides/guide-nuwan.jpg', 'imgs'=>['image/guides/guide-nuwan.jpg'], 'tags'=>json_encode(['Mountain','Highlands Trek','Tea Trails'])],
+    ['id'=>'guide-wildlife-3', 'name'=>'Kavindi Jayawardena', 'title'=>'Rainforest Wildlife & Birding Guide', 'desc'=>'Nature guide leading small-group rainforest walks focused on endemic birds, responsible wildlife viewing, and local conservation.', 'exp'=>'6 years guiding rainforest and birdwatching excursions', 'price'=>43.00, 'rating'=>0.00, 'loc'=>'Sinharaja Forest Reserve', 'img'=>'image/guides/guide-priya.jpg', 'imgs'=>['image/guides/guide-priya.jpg'], 'tags'=>json_encode(['Wildlife','Bird Watching','Rainforest'])],
+    ['id'=>'guide-surf-3', 'name'=>'Tharindu Peris', 'title'=>'Beginner Surf Coach & Ocean Guide', 'desc'=>'Patient surf coach offering beginner lessons, beach safety guidance, and small-group sessions in gentle waves.', 'exp'=>'5 years surf instruction and beach safety experience', 'price'=>36.00, 'rating'=>0.00, 'loc'=>'Weligama Bay', 'img'=>'image/guides/guide-kasun.jpg', 'imgs'=>['image/guides/guide-kasun.jpg'], 'tags'=>json_encode(['Surfing','Beginner Lessons','Ocean Safety'])],
+    ['id'=>'guide-heritage-3', 'name'=>'Malini Abeysekara', 'title'=>'Galle Fort Heritage Walk Guide', 'desc'=>'Local history guide sharing the architecture, stories, and everyday life of Galle Fort on relaxed walking tours.', 'exp'=>'7 years leading cultural and heritage walks', 'price'=>39.00, 'rating'=>0.00, 'loc'=>'Galle Fort, Sri Lanka', 'img'=>'image/guides/guide-nirmala.jpg', 'imgs'=>['image/guides/guide-nirmala.jpg'], 'tags'=>json_encode(['Heritage','Galle Fort','Architecture'])],
+    ['id'=>'guide-mtn-3', 'name'=>'Sanjeewa Rathnayake', 'title'=>'Ella Highlands Hiking Companion', 'desc'=>'Experienced local trekking guide for Ella Rock and tea country trails, with flexible routes for different fitness levels.', 'exp'=>'6 years guiding hikes through the central highlands', 'price'=>44.00, 'rating'=>0.00, 'loc'=>'Ella, Sri Lanka', 'img'=>'image/guides/guide-aruna.jpg', 'imgs'=>['image/guides/guide-aruna.jpg'], 'tags'=>json_encode(['Mountain','Hiking','Tea Trails'])],
 ];
 
 foreach ($seed_guides as $item) {
@@ -509,7 +530,7 @@ foreach ($ratingTables as $ratingTable => $ratingType) {
     }
 }
 
-$messages[] = "✅ Catalog verified and seeded: distinct photos, review-calculated ratings, and at least 2 items guaranteed for every sub-item.";
+$messages[] = "✅ Catalog verified and seeded with sample listings across all categories; ratings are calculated from submitted reviews.";
 
 // Ensure image directories exist
 $dirs = [
@@ -557,7 +578,7 @@ $conn_setup->close();
 <body>
 <div class="card">
     <h1>🧭 Tour Guide Setup &amp; Migration</h1>
-    <p class="subtitle">Database repair, catalog seeding (2+ items per sub-type), and account validation</p>
+    <p class="subtitle">Database repair, sample catalog seeding, and account validation</p>
     <?php foreach ($messages as $m): ?>
         <div class="msg success"><?= htmlspecialchars($m) ?></div>
     <?php endforeach; ?>

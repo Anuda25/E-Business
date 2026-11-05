@@ -17,14 +17,15 @@ A complete, production-style PHP/MySQL travel booking platform built for XAMPP.
    ```
    http://localhost/New/setup.php
    ```
-   This automatically repairs database tables, migrates roles, creates the default Admin and Guest accounts, and seeds the catalog with at least 2 items for every sub-item.
+   This automatically repairs database tables, migrates roles, creates the default Admin and Guest accounts, and seeds sample listings across all accommodation, bike, equipment, and guide categories. Existing seeded listings are not duplicated when setup is rerun.
 
 5. **Visit the website:**
    ```
    http://localhost/New/
    ```
 
-Booking payments are capped at **200,000.00** in the configured PayHere currency.
+The application does not impose a booking payment amount cap. PayHere may still enforce limits based on your merchant account, currency, and transaction settings.
+For PayHere, set `PAYHERE_NOTIFY_URL` in `config.local.php` to a publicly reachable HTTPS URL such as `https://YOUR_PUBLIC_DOMAIN/New/api.php?action=payhere_notify`. The URL must point to the notification handler, and the domain must be enabled for the merchant account. For local testing, run `C:\xampp\php\php.exe -S 127.0.0.1:8181 -t C:\xampp\htdocs\New C:\xampp\htdocs\New\payhere_tunnel_router.php`, then run `cloudflared tunnel --url http://127.0.0.1:8181` and set the generated URL with `/?action=payhere_notify` as `PAYHERE_NOTIFY_URL`. The tunnel router exposes only the PayHere callback, not the rest of the local site. Quick tunnel URLs are temporary and change when restarted. Use matching sandbox or live merchant credentials and environment. Payment status is confirmed only after the signed server notification is received.
 Item ratings and review counts are calculated from submitted guest reviews; unrated items show as new until their first review.
 
 ---
@@ -64,8 +65,8 @@ New/
 - **Account Creation:** Can self-register a Guest account with Full Name, Username, Email, Bank Details, Phone, and Password.
 - **Authentication:** Can log in and log out at any time.
 - **Catalog Browsing:** Can browse and filter all available items (Accommodations, Bikes, Equipment, Tour Guides).
-- **Reservations:** Can book accommodations, bikes, equipment, and hire tour guides.
-- **Visibility Restriction:** **Cannot see booked items himself.** Once a Guest books an item, that item is automatically excluded from their catalog/search view so they cannot book it again. If they cancel their reservation in "My Bookings", the item immediately becomes available in the catalog once more.
+- **Reservations:** Can book accommodations, bikes, equipment, and hire tour guides. Accommodation, bike, and equipment listings can have multiple units; guests choose a quantity before selecting dates, and bookings reserve only that quantity.
+- **Availability:** Accommodation, bike, and equipment calendars show remaining units for each date and allow overlapping bookings while enough inventory remains. Admins set the inventory when creating or editing listings.
 - **Strict Boundaries:**
   - Cannot add items.
   - Cannot remove items.
@@ -114,7 +115,7 @@ New/
 ## 🛠 Database Migration & Repair Fixes
 
 The database initializer (`setup.php`) includes:
-1. **Schema Repair:** Automatically adds missing columns (`bank_details`, `full_name`, `created_by`, `time_period`, `start_date`, `end_date`, etc.) and creates the `item_date_blocks` table for Admin-managed temporary booking blocks without data loss. The app also ensures this table exists on its first database connection, so existing installs do not need a manual setup run for date blocking.
+1. **Schema Repair:** Automatically adds missing columns (`bank_details`, `full_name`, `created_by`, `time_period`, bike and equipment `units`, `start_date`, `end_date`, etc.) and creates the `item_date_blocks` table for Admin-managed temporary booking blocks without data loss. The app also ensures inventory columns and the date-block table exist on its first database connection, so existing installs do not need a manual setup run for date blocking.
 2. **Availability Calendars:** Manage My Items calendars show existing bookings and temporary blocks; Admins select available date ranges to block them and can remove a block from its calendar or block list.
 3. **Role Migration:** Automatically detects older `Host` roles and migrates them to `Admin`.
 4. **Admin & Guest Restoration:** Creates default `admin` and `traveler` accounts when missing and preserves existing credentials and profile details on subsequent runs.

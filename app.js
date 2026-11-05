@@ -552,7 +552,7 @@ function buildListingCard(item, type) {
         <div class="card-title">${escHtml(item.name)}</div>
         <div class="card-meta">
           <span class="card-meta-item">📍 ${escHtml(item.location)}</span>
-          ${type === 'accommodation' && item.units ? `<span class="card-meta-item">🚪 ${item.units} unit${item.units !== 1 ? 's' : ''}</span>` : ''}
+          ${['accommodation', 'bikes', 'equipment'].includes(type) && item.units ? `<span class="card-meta-item">🚪 ${item.units} unit${item.units !== 1 ? 's' : ''}</span>` : ''}
         </div>
         ${item.description ? `<p class="card-desc">${escHtml(item.description)}</p>` : ''}
         <div class="card-footer">
@@ -748,6 +748,7 @@ function renderDetailModal(type, item) {
         <div class="detail-meta-item"><div class="detail-meta-label">Category</div><div class="detail-meta-value">${escHtml(item.type || item.category)}</div></div>
         <div class="detail-meta-item"><div class="detail-meta-label">Price</div><div class="detail-meta-value" style="color:var(--accent-gold);font-weight:700">${formatCurrency(item.price)}</div></div>
         <div class="detail-meta-item"><div class="detail-meta-label">Location</div><div class="detail-meta-value">📍 ${escHtml(item.location)}</div></div>
+        <div class="detail-meta-item"><div class="detail-meta-label">Available Units</div><div class="detail-meta-value">📦 ${item.units || 1}</div></div>
         <div class="detail-meta-item"><div class="detail-meta-label">Rental Period</div><div class="detail-meta-value">⏱ ${escHtml(item.time_period || '1 day')}</div></div>
       </div>`;
   } else if (type === 'guides') {
@@ -880,22 +881,26 @@ function buildBookingForm(type, item) {
   if (type === 'accommodation') {
     return `
       <form onsubmit="submitBooking(event, 'accommodation', '${item.id}', ${price})">
-        ${dateSelection}
         <div class="form-group">
-          <label>Units Required</label>
-          <input type="number" name="units" class="form-control" value="1" min="1" max="${item.units || 10}">
+          <label>Units Required (up to ${item.units || 1} available)</label>
+          <input type="number" name="units" class="form-control" value="1" min="1" max="${item.units || 1}" required oninput="updateInventoryBookingUnits('accommodation', '${item.id}', ${price})">
         </div>
+        ${dateSelection}
         <div id="booking-msg-${item.id}"></div>
         <button type="submit" class="btn btn-primary btn-full mt-2">💳 Proceed to Payment Gateway</button>
       </form>`;
   } else if (type === 'bikes') {
     return `
       <form onsubmit="submitBooking(event, 'bike', '${item.id}', ${price})">
+        <div class="form-group">
+          <label>Bikes Required (up to ${item.units || 1} available)</label>
+          <input type="number" name="units" class="form-control" value="1" min="1" max="${item.units || 1}" required oninput="updateInventoryBookingUnits('bikes', '${item.id}', ${price})">
+        </div>
         ${dateSelection}
         <input type="hidden" name="time_period" id="bike-period-${item.id}" value="1 day">
         <div class="calc-summary-card" id="bike-calc-box-${item.id}">
           <div class="calc-summary-row">
-            <span>Daily Rate:</span>
+            <span>Daily Rate (per bike):</span>
             <strong>${formatCurrency(price)}/day</strong>
           </div>
           <div class="calc-summary-row">
@@ -913,11 +918,15 @@ function buildBookingForm(type, item) {
   } else if (type === 'equipment') {
     return `
       <form onsubmit="submitBooking(event, 'equipment', '${item.id}', ${price})">
+        <div class="form-group">
+          <label>Units Required (up to ${item.units || 1} available)</label>
+          <input type="number" name="units" class="form-control" value="1" min="1" max="${item.units || 1}" required oninput="updateInventoryBookingUnits('equipment', '${item.id}', ${price})">
+        </div>
         ${dateSelection}
         <input type="hidden" name="time_period" id="equip-period-${item.id}" value="1 day">
         <div class="calc-summary-card" id="equip-calc-box-${item.id}">
           <div class="calc-summary-row">
-            <span>Daily Rate:</span>
+            <span>Daily Rate (per unit):</span>
             <strong>${formatCurrency(price)}/day</strong>
           </div>
           <div class="calc-summary-row">
@@ -981,6 +990,8 @@ function initializeBookingCalendar(type, item) {
     itemId: String(item.id),
     type,
     price: parseFloat(item.price) || 0,
+    units: Math.max(1, parseInt(item.units, 10) || 1),
+    requestedUnits: 1,
     adminMode: false,
     year: now.getFullYear(),
     month: now.getMonth(),
@@ -1020,6 +1031,31 @@ function formatBookingDate(date) {
   return `${year}-${month}-${day}`;
 }
 
+function getBookedUnitsOnDate(ranges, date) {
+  return ranges
+    .filter(range => date >= range.start_date && date <= (range.end_date || range.start_date))
+    .reduce((total, range) => total + Math.max(1, parseInt(range.units, 10) || 1), 0);
+}
+
+function isUnitInventoryCalendar(state) {
+  return !state.adminMode && ['accommodation', 'bikes', 'equipment'].includes(state.type);
+}
+
+function isBookingDateRangeUnavailable(state, startDate, endDate) {
+  const overlaps = range => startDate <= (range.end_date || range.start_date) && endDate >= range.start_date;
+  if (state.blockedRanges.some(overlaps)) return true;
+  if (isUnitInventoryCalendar(state)) {
+    const startTime = Date.parse(`${startDate}T00:00:00Z`);
+    const endTime = Date.parse(`${endDate}T00:00:00Z`);
+    for (let time = startTime; time <= endTime; time += 86400000) {
+      const date = new Date(time).toISOString().slice(0, 10);
+      if (getBookedUnitsOnDate(state.bookedRanges, date) + state.requestedUnits > state.units) return true;
+    }
+    return false;
+  }
+  return state.bookedRanges.some(overlaps);
+}
+
 function renderBookingCalendar(key) {
   const state = bookingCalendarStates[key];
   if (!state) return;
@@ -1042,23 +1078,35 @@ function renderBookingCalendar(key) {
   for (let day = 1; day <= daysInMonth; day++) {
     const date = formatBookingDate(new Date(state.year, state.month, day));
     const matchingRanges = unavailableRanges.filter(range => date >= range.start_date && date <= (range.end_date || range.start_date));
-    const reserved = matchingRanges.some(range => range.kind === 'reserved');
+    const bookedUnits = isUnitInventoryCalendar(state) ? getBookedUnitsOnDate(state.bookedRanges, date) : 0;
+    const remainingUnits = state.units - bookedUnits;
+    const reserved = isUnitInventoryCalendar(state)
+      ? bookedUnits + state.requestedUnits > state.units
+      : matchingRanges.some(range => range.kind === 'reserved');
     const blocked = matchingRanges.some(range => range.kind === 'blocked');
     const unavailable = reserved || blocked;
+    const partiallyBooked = isUnitInventoryCalendar(state) && bookedUnits > 0 && !reserved;
     const selected = date === state.startDate || date === state.endDate;
     const inSelectedRange = state.startDate && state.endDate && date > state.startDate && date < state.endDate;
     const classes = [
       'booking-calendar-day',
+      isUnitInventoryCalendar(state) ? 'has-unit-count' : '',
       reserved ? 'is-reserved' : '',
       blocked ? 'is-blocked' : '',
+      partiallyBooked ? 'is-partially-booked' : '',
       date < today ? 'is-past' : '',
       selected ? 'is-selected' : '',
       inSelectedRange ? 'is-in-selected-range' : '',
     ].filter(Boolean).join(' ');
     const disabled = (state.adminMode ? reserved : unavailable) || date < today;
-    const title = unavailable ? (reserved && blocked ? 'Reserved and blocked' : reserved ? 'Already reserved' : 'Temporarily unavailable') : '';
+    const title = blocked
+      ? 'Temporarily unavailable'
+      : isUnitInventoryCalendar(state)
+        ? `${remainingUnits} of ${state.units} unit(s) available`
+        : reserved ? 'Already reserved' : '';
     const selectAction = state.adminMode ? 'selectAdminBookingCalendarDate' : 'selectBookingCalendarDate';
-    daysHtml += `<button type="button" class="${classes}" ${disabled ? 'disabled' : ''} ${title ? `title="${title}" aria-label="${date}, ${title}"` : `aria-label="${date}"`} onclick="${selectAction}('${state.key}', '${date}')">${day}</button>`;
+    const unitCount = isUnitInventoryCalendar(state) ? `<small class="booking-calendar-availability">${remainingUnits}</small>` : '';
+    daysHtml += `<button type="button" class="${classes}" ${disabled ? 'disabled' : ''} ${title ? `title="${title}" aria-label="${date}, ${title}"` : `aria-label="${date}"`} onclick="${selectAction}('${state.key}', '${date}')">${day}${unitCount}</button>`;
   }
 
   const statusText = state.message || (state.endDate
@@ -1075,7 +1123,7 @@ function renderBookingCalendar(key) {
     <div class="booking-calendar-grid">${daysHtml}</div>
     <div class="booking-calendar-legend">
       <span><i class="booking-calendar-key is-available"></i> Available</span>
-      ${state.adminMode ? '<span><i class="booking-calendar-key is-unavailable"></i> Reserved</span><span><i class="booking-calendar-key is-blocked"></i> Admin blocked</span>' : '<span><i class="booking-calendar-key is-unavailable"></i> Unavailable</span>'}
+      ${state.adminMode ? '<span><i class="booking-calendar-key is-unavailable"></i> Reserved</span><span><i class="booking-calendar-key is-blocked"></i> Admin blocked</span>' : `<span><i class="booking-calendar-key is-unavailable"></i> Unavailable for ${state.requestedUnits || 1} unit(s)</span>${isUnitInventoryCalendar(state) ? '<span><i class="booking-calendar-key is-partial"></i> Partially booked</span>' : ''}`}
       <span><i class="booking-calendar-key is-selected"></i> Selected</span>
     </div>
     ${state.adminMode ? '' : `<div class="booking-calendar-status" aria-live="polite">${statusText}</div>`}`;
@@ -1119,12 +1167,7 @@ function selectBookingCalendarDate(key, date) {
     state.endDate = '';
     state.message = '';
   } else {
-    const rangeEnd = state.blockedRanges.concat(state.bookedRanges).find(range => {
-      const start = range.start_date;
-      const end = range.end_date || range.start_date;
-      return state.startDate <= end && date >= start;
-    });
-    if (rangeEnd) {
+    if (isBookingDateRangeUnavailable(state, state.startDate, date)) {
       state.message = 'That date range includes unavailable days. Please choose another end date.';
       renderBookingCalendar(key);
       return;
@@ -1178,6 +1221,7 @@ function updateBikeLiveCalculation(itemId, basePrice) {
   const periodEl = document.getElementById(`bike-period-${itemId}`);
   const daysLabel = document.getElementById(`bike-days-label-${itemId}`);
   const totalLabel = document.getElementById(`bike-total-label-${itemId}`);
+  const unitsInput = document.querySelector(`#bike-calc-box-${itemId}`)?.closest('form')?.querySelector('[name="units"]');
 
   if (!startEl) return;
   const s = startEl.value;
@@ -1188,7 +1232,8 @@ function updateBikeLiveCalculation(itemId, basePrice) {
     const diff = (new Date(e) - new Date(s)) / (1000 * 60 * 60 * 24);
     days = Math.max(1, Math.round(diff) + 1);
   }
-  const total = basePrice * days;
+  const units = Math.max(1, parseInt(unitsInput?.value || '1', 10) || 1);
+  const total = basePrice * days * units;
   const periodStr = `${days} day${days > 1 ? 's' : ''}`;
 
   if (periodEl) periodEl.value = periodStr;
@@ -1203,6 +1248,7 @@ function updateEquipmentLiveCalculation(itemId, basePrice) {
   const periodEl = document.getElementById(`equip-period-${itemId}`);
   const daysLabel = document.getElementById(`equip-days-label-${itemId}`);
   const totalLabel = document.getElementById(`equip-total-label-${itemId}`);
+  const unitsInput = document.querySelector(`#equip-calc-box-${itemId}`)?.closest('form')?.querySelector('[name="units"]');
 
   if (!startEl) return;
   const s = startEl.value;
@@ -1213,7 +1259,8 @@ function updateEquipmentLiveCalculation(itemId, basePrice) {
     const diff = (new Date(e) - new Date(s)) / (1000 * 60 * 60 * 24);
     days = Math.max(1, Math.round(diff) + 1);
   }
-  const total = basePrice * days;
+  const units = Math.max(1, parseInt(unitsInput?.value || '1', 10) || 1);
+  const total = basePrice * days * units;
   const periodStr = `${days} day${days > 1 ? 's' : ''}`;
 
   if (periodEl) periodEl.value = periodStr;
@@ -1221,7 +1268,24 @@ function updateEquipmentLiveCalculation(itemId, basePrice) {
   if (totalLabel) totalLabel.textContent = formatCurrency(total);
 }
 
-const MAX_BOOKING_PAYMENT = 200000;
+function updateInventoryBookingUnits(type, itemId, basePrice) {
+  const key = getBookingCalendarKey(type, itemId);
+  const state = bookingCalendarStates[key];
+  const form = document.getElementById(`booking-calendar-${key}`)?.closest('form');
+  const input = form?.querySelector('[name="units"]');
+  if (!state || !input) return;
+  const requestedUnits = parseInt(input.value, 10);
+  state.requestedUnits = Number.isFinite(requestedUnits) ? Math.min(state.units, Math.max(1, requestedUnits)) : 1;
+  const selectedEnd = state.endDate || state.startDate;
+  if (state.startDate && isBookingDateRangeUnavailable(state, state.startDate, selectedEnd)) {
+    state.startDate = '';
+    state.endDate = '';
+    state.message = `The selected dates cannot fit ${state.requestedUnits} unit(s). Please choose another date range.`;
+  }
+  renderBookingCalendar(key);
+  if (type === 'bikes') updateBikeLiveCalculation(itemId, basePrice);
+  if (type === 'equipment') updateEquipmentLiveCalculation(itemId, basePrice);
+}
 
 async function submitBooking(e, itemType, itemId, basePrice) {
   e.preventDefault();
@@ -1253,7 +1317,7 @@ async function submitBooking(e, itemType, itemId, basePrice) {
   }
 
   // Recheck availability in case the calendar data changed before submission.
-  if (currentActiveDetailItem && currentActiveDetailItem.item && startDate) {
+  if (currentActiveDetailItem && currentActiveDetailItem.item && startDate && !['accommodation', 'equipment', 'bike'].includes(itemType)) {
     const s = startDate;
     const e = endDate;
     const unavailableRanges = [
@@ -1272,24 +1336,37 @@ async function submitBooking(e, itemType, itemId, basePrice) {
       return;
     }
   }
+  if (['accommodation', 'equipment', 'bike'].includes(itemType) && currentActiveDetailItem && currentActiveDetailItem.item) {
+    const item = currentActiveDetailItem.item;
+    const inventoryState = {
+      type: itemType === 'bike' ? 'bikes' : itemType,
+      units: parseInt(item.units, 10) || 1,
+      requestedUnits: units,
+      bookedRanges: item.booked_ranges || [],
+      blockedRanges: item.blocked_ranges || [],
+      adminMode: false,
+    };
+    const unavailable = !Number.isFinite(units) || units < 1 || units > inventoryState.units ||
+      isBookingDateRangeUnavailable(inventoryState, startDate, endDate);
+    if (unavailable) {
+      const itemName = itemType === 'bike' ? 'bike' : itemType === 'accommodation' ? 'accommodation' : 'equipment';
+      if (msgEl) msgEl.innerHTML = `<div class="alert alert-error">Those dates cannot fit ${units} ${itemName} unit(s). Check the calendar for availability or choose different dates.</div>`;
+      btn.disabled = false;
+      btn.textContent = '💳 Proceed to Payment';
+      return;
+    }
+  }
 
   // Calculate total price
   let days = 1;
   if (startDate && endDate) {
     const diff = (new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24);
-    days = Math.max(1, Math.round(diff) + (itemType === 'guide' || itemType === 'bike' ? 1 : 0));
+    days = Math.max(1, Math.round(diff) + (itemType === 'guide' || itemType === 'bike' || itemType === 'equipment' ? 1 : 0));
   } else if (startDate) {
     days = 1;
   }
   const calcPeriod = (itemType === 'bike') ? `${days} day${days > 1 ? 's' : ''}` : (timePeriod || `${days} day${days > 1 ? 's' : ''}`);
   const totalPrice = basePrice * days * units;
-  if (totalPrice > MAX_BOOKING_PAYMENT) {
-    if (msgEl) msgEl.innerHTML = '<div class="alert alert-error">The maximum PayHere payment is 200,000.00. Choose a shorter date range or fewer units.</div>';
-    btn.disabled = false;
-    btn.textContent = '💳 Proceed to Payment';
-    return;
-  }
-
   try {
     const res = await API.post('create_booking', {
       item_type: itemType,
@@ -1558,6 +1635,7 @@ function buildAdminAddItemPanel() {
           <div class="form-group"><label>Location *</label><input name="location" class="form-control" required placeholder="Ella Highlands"></div>
           <div class="form-group"><label>Price (USD $) *</label><input type="number" name="price" class="form-control" required min="1" step="0.01" placeholder="25.00"></div>
         </div>
+        <div class="form-group"><label>Available Units</label><input type="number" name="units" class="form-control" value="1" min="1" required></div>
         <div class="form-row">
           <div class="form-group"><label>Rental Period</label>
             <select name="time_period" class="form-control">
@@ -1607,6 +1685,7 @@ function buildAdminAddItemPanel() {
           <div class="form-group"><label>Location *</label><input name="location" class="form-control" required placeholder="Weligama Bay"></div>
           <div class="form-group"><label>Rental Price (USD $) *</label><input type="number" name="price" class="form-control" required min="1" step="0.01" placeholder="15.00"></div>
         </div>
+        <div class="form-group"><label>Available Units</label><input type="number" name="units" class="form-control" value="1" min="1" required></div>
         <div class="form-row">
           <div class="form-group"><label>Rental Period</label>
             <select name="time_period" class="form-control">
@@ -1714,6 +1793,12 @@ function buildAdminReceivedPanel() {
           <input type="date" id="rf-date-to" class="form-control" style="padding:8px 12px;font-size:0.85rem">
         </div>
         <div class="received-filter-field">
+          <label>Location (ranked by earnings)</label>
+          <select id="rf-location" class="form-control" style="padding:8px 12px;font-size:0.85rem">
+            <option value="">All Locations</option>
+          </select>
+        </div>
+        <div class="received-filter-field">
           <label>Item Type</label>
           <select id="rf-item-type" class="form-control" style="padding:8px 12px;font-size:0.85rem">
             <option value="">All Types</option>
@@ -1750,6 +1835,7 @@ function applyReceivedFilters() {
     date_from: document.getElementById('rf-date-from')?.value || '',
     date_to: document.getElementById('rf-date-to')?.value || '',
     item_type: document.getElementById('rf-item-type')?.value || '',
+    location: document.getElementById('rf-location')?.value || '',
     status: document.getElementById('rf-status')?.value || '',
   };
   loadReceivedBookings(filters);
@@ -1757,7 +1843,7 @@ function applyReceivedFilters() {
 
 function clearReceivedFilters() {
   ['rf-date-from','rf-date-to'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  ['rf-item-type','rf-status'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['rf-item-type','rf-status','rf-location'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   loadReceivedBookings();
 }
 
@@ -2266,6 +2352,16 @@ async function loadReceivedBookings(filters = {}) {
   try {
     const res = await API.get('received_bookings', filters);
     if (!res.success) throw new Error(res.message);
+
+    // Populate location options using live earnings calculated from existing bookings.
+    const locationSelect = document.getElementById('rf-location');
+    if (locationSelect && Array.isArray(res.location_earnings)) {
+      const selectedLocation = filters.location || locationSelect.value || '';
+      locationSelect.innerHTML = '<option value="">All Locations</option>' + res.location_earnings.map(loc =>
+        `<option value="${escHtml(loc.city)}">${escHtml(loc.city)} — ${formatCurrency(loc.earnings)}</option>`
+      ).join('');
+      locationSelect.value = selectedLocation;
+    }
 
     // Render summary cards
     const summaryEl = document.getElementById('received-summary');
@@ -2837,6 +2933,10 @@ function openEditItemModal(type, item) {
           <input name="time_period" class="form-control" value="${escHtml(item.time_period || '1 day')}">
         </div>
       </div>
+      <div class="form-group">
+        <label>Available Units</label>
+        <input type="number" name="units" class="form-control" value="${Math.max(1, parseInt(item.units, 10) || 1)}" min="1" required>
+      </div>
       <div class="form-row">
         <div class="form-group"><label>Available From</label><input type="date" name="available_from" class="form-control" value="${item.available_from || ''}"></div>
         <div class="form-group"><label>Available To</label><input type="date" name="available_to" class="form-control" value="${item.available_to || ''}"></div>
@@ -2860,6 +2960,10 @@ function openEditItemModal(type, item) {
           <label>Rental Period</label>
           <input name="time_period" class="form-control" value="${escHtml(item.time_period || '1 day')}">
         </div>
+      </div>
+      <div class="form-group">
+        <label>Available Units</label>
+        <input type="number" name="units" class="form-control" value="${Math.max(1, parseInt(item.units, 10) || 1)}" min="1" required>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Available From</label><input type="date" name="available_from" class="form-control" value="${item.available_from || ''}"></div>
@@ -3018,7 +3122,6 @@ let activePaymentSession = null;
 function openPayHereCheckout(bookingId, payhereData) {
   payhereData.return_url = window.location.href;
   payhereData.cancel_url = window.location.href;
-  payhereData.notify_url = `${window.location.origin}/New/api.php?action=payhere_notify`;
   activePaymentSession = { bookingId, payhereData };
   const modal = document.getElementById('payment-modal');
   const body = document.getElementById('payment-modal-body');
@@ -3083,8 +3186,8 @@ function triggerPayHerePopup() {
 
   if (typeof payhere !== 'undefined') {
     payhere.onCompleted = function onCompleted(orderId) {
-      Toast.success('PayHere Payment Completed! Order: ' + orderId);
-      confirmPaymentOnServer(activePaymentSession.bookingId, orderId, 'PH-TXN-' + Date.now());
+      Toast.info('Checkout finished. Verifying payment with PayHere…');
+      verifyPayHerePayment(activePaymentSession.bookingId);
     };
 
     payhere.onDismissed = function onDismissed() {
@@ -3106,28 +3209,34 @@ function triggerPayHerePopup() {
   }
 }
 
-async function confirmPaymentOnServer(bookingId, orderId, paymentId) {
+async function verifyPayHerePayment(bookingId) {
   try {
-    const res = await API.post('confirm_payment', {
-      booking_id: bookingId,
-      order_id: orderId,
-      payment_id: paymentId,
-      payment_method: 'PayHere'
-    });
+    for (let attempt = 0; attempt < 15; attempt++) {
+      const res = await API.get('get_receipt', { booking_id: bookingId });
+      if (!res.success || !res.receipt) {
+        throw new Error(res.message || 'Could not verify PayHere payment status.');
+      }
 
-    if (res.success) {
-      closePaymentModal();
-      Toast.success('Payment successfully completed! Official receipt generated.');
-      showReceiptModal(res.receipt);
-      if (State.currentPage === 'home') loadHomeData();
-      else if (State.currentPage === 'profile') loadGuestBookings();
-      else loadListings(State.currentPage);
-    } else {
-      Toast.error(res.message);
+      if (res.receipt.payment_status === 'PAID') {
+        closePaymentModal();
+        Toast.success('Payment verified. Official receipt generated.');
+        showReceiptModal(res.receipt);
+        if (State.currentPage === 'home') loadHomeData();
+        else if (State.currentPage === 'profile') loadGuestBookings();
+        else loadListings(State.currentPage);
+        return;
+      }
+
+      if (attempt < 14) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
     }
   } catch (e) {
-    Toast.error('Error confirming payment.');
+    Toast.error(e.message || 'Could not verify PayHere payment.');
+    return;
   }
+
+  Toast.info('PayHere has not confirmed this payment yet. Check your booking status again shortly.');
 }
 
 async function payBookingNow(bookingId) {

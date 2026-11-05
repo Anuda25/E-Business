@@ -17,8 +17,7 @@ if (!defined('PAYHERE_MERCHANT_ID')) define('PAYHERE_MERCHANT_ID', getenv('PAYHE
 if (!defined('PAYHERE_MERCHANT_SECRET')) define('PAYHERE_MERCHANT_SECRET', getenv('PAYHERE_MERCHANT_SECRET') !== false ? getenv('PAYHERE_MERCHANT_SECRET') : '');
 if (!defined('PAYHERE_ENV')) define('PAYHERE_ENV', getenv('PAYHERE_ENV') !== false ? getenv('PAYHERE_ENV') : 'sandbox');
 if (!defined('PAYHERE_CURRENCY')) define('PAYHERE_CURRENCY', getenv('PAYHERE_CURRENCY') !== false ? getenv('PAYHERE_CURRENCY') : 'USD');
-if (!defined('PAYMENT_MAX_AMOUNT')) define('PAYMENT_MAX_AMOUNT', 200000.00);
-
+if (!defined('PAYHERE_NOTIFY_URL')) define('PAYHERE_NOTIFY_URL', getenv('PAYHERE_NOTIFY_URL') !== false ? getenv('PAYHERE_NOTIFY_URL') : '');
 if (session_status() === PHP_SESSION_NONE) {
     session_name('tourguide_session');
     session_start();

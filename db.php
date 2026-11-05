@@ -32,6 +32,34 @@ function getDB() {
                 echo json_encode(['success' => false, 'message' => 'Unable to initialize temporary booking date blocks.']);
                 exit;
             }
+            $equipmentUnits = $conn->query("SHOW COLUMNS FROM `equipment` LIKE 'units'");
+            if (!$equipmentUnits) {
+                error_log('Unable to check equipment units column: ' . $conn->error);
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Unable to initialize equipment inventory. Run setup.php and try again.']);
+                exit;
+            }
+            if ($equipmentUnits->num_rows === 0 && !$conn->query("ALTER TABLE `equipment` ADD COLUMN `units` INT NOT NULL DEFAULT 1")) {
+                error_log('Unable to add equipment units column: ' . $conn->error);
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Unable to initialize equipment inventory: ' . $conn->error]);
+                exit;
+            }
+            $equipmentUnits->free();
+            $bikeUnits = $conn->query("SHOW COLUMNS FROM `bikes` LIKE 'units'");
+            if (!$bikeUnits) {
+                error_log('Unable to check bike units column: ' . $conn->error);
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Unable to initialize bike inventory. Run setup.php and try again.']);
+                exit;
+            }
+            if ($bikeUnits->num_rows === 0 && !$conn->query("ALTER TABLE `bikes` ADD COLUMN `units` INT NOT NULL DEFAULT 1")) {
+                error_log('Unable to add bike units column: ' . $conn->error);
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Unable to initialize bike inventory: ' . $conn->error]);
+                exit;
+            }
+            $bikeUnits->free();
         } catch (Throwable $e) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);

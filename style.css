@@ -1819,6 +1819,19 @@ select.form-control { appearance: none; cursor: pointer; }
   font: inherit;
 }
 
+.booking-calendar-day.has-unit-count {
+  position: relative;
+  padding-bottom: 8px;
+}
+
+.booking-calendar-availability {
+  position: absolute;
+  bottom: 1px;
+  color: var(--text-secondary);
+  font-size: 0.52rem;
+  line-height: 1;
+}
+
 button.booking-calendar-day:not(:disabled) {
   cursor: pointer;
 }
@@ -1834,6 +1847,12 @@ button.booking-calendar-day:not(:disabled):hover {
   color: #ef4444;
   text-decoration: line-through;
   opacity: 1;
+}
+
+.booking-calendar-day.is-partially-booked,
+.booking-calendar-key.is-partial {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(245, 158, 11, 0.18);
 }
 
 .booking-calendar-day.is-past {
